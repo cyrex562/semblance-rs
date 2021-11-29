@@ -23,9 +23,9 @@
 use crate::pe_h::{PortableExecutableHeader, RelocPe, Section};
 use crate::semblance;
 use crate::semblance::{read_dword, read_word};
-use crate::x86_instr_h;
-use crate::x86_instr_h::{Argument, INSTR_RELOC, Instruction};
-use crate::x86_instr_h::ArgumentType::{IMM, MEM, MOFFS, NONE, REL, REL8, RM};
+use crate::x86_instr_def;
+use crate::x86_instr_def::{Argument, INSTR_RELOC, Instruction};
+use crate::x86_instr_arg_type::X86ArgType::{IMM, MEM, MOFFS, NONE, REL, REL8, RM};
 
 pub const pe_rel_addr: i32 = -1;
 
