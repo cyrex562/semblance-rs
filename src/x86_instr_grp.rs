@@ -111,8 +111,8 @@ pub const INSTRUCTIONS_GROUP: [Operand;108] = [
     Operand::new(0xFF, 0, -1, "inc",        RM,     NONE,      OP_LOCK),
     Operand::new(0xFF, 1, -1, "dec",        RM,     NONE,      OP_LOCK),
     Operand::new(0xFF, 2, -1, "call",       RM,     NONE,      OP_64),
-    Operand::new(0xFF, 3, -1, "call",       MEM,    NONE,      OP_64|OP_FAR),          /* a change in bitness should only happen across segment boundaries */
+    Operand::new(0xFF, 3, -1, "call",       MEM,    NONE,      OP_64|OP_FAR),          /* a change in bitness should only happen across Segment boundaries */
     Operand::new(0xFF, 4, -1, "jmp",        RM,     NONE,      OP_64|OP_STOP),
-    Operand::new(0xFF, 5, -1, "jmp",        MEM,    NONE,      OP_64|OP_STOP|OP_FAR),  /* a change in bitness should only happen across segment boundaries */
+    Operand::new(0xFF, 5, -1, "jmp",        MEM,    NONE,      OP_64|OP_STOP|OP_FAR),  /* a change in bitness should only happen across Segment boundaries */
     Operand::new(0xFF, 6, -1, "push",       RM,     NONE,      OP_STACK),
 ];

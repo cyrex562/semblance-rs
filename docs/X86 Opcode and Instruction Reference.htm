@@ -596,15 +596,15 @@ This thread is locked.-->
               <code><a href="http://ref.x86asm.net/geek.html#x70">70&nbsp;JO</a></code>
               </li>
 	      <li>
-<code>sr</code> means segment register specifier -
-	      a&nbsp;code of one of original four segment registers (2
+<code>sr</code> means Segment register specifier -
+	      a&nbsp;code of one of original four Segment registers (2
 	      bits, bit index&nbsp;3). See also <code>S2</code>
 	      addressing method.
               <code><a href="http://ref.x86asm.net/geek.html#x06">06&nbsp;PUSH</a></code>
               </li>
 	      <li>
-<code>sre</code> means segment register specifier -
-	      a&nbsp;code of any segment registers (3 bits, bit
+<code>sre</code> means Segment register specifier -
+	      a&nbsp;code of any Segment registers (3 bits, bit
 	      index&nbsp;0 or&nbsp;3). See also <code>S30</code> and
 	      <code>S33</code> addressing methods.
               <code><a href="http://ref.x86asm.net/geek.html#x0FA0">0FA0&nbsp;PUSH</a></code>
@@ -958,7 +958,7 @@ This thread is locked.-->
 <dfn>prefix</dfn>
                 <ol>
 		  <li>
-<dfn>segreg</dfn> segment register</li>
+<dfn>segreg</dfn> Segment register</li>
 		  <li>
 <dfn>branch</dfn>
 		    <ol>
@@ -1017,7 +1017,7 @@ This thread is locked.-->
 		  <li>
 <dfn>flgctrl</dfn> flag control</li>
 		  <li>
-<dfn>segreg</dfn> segment register manipulation</li>
+<dfn>segreg</dfn> Segment register manipulation</li>
 		  <li><dfn>control</dfn></li>
 		</ol>
               </li>
@@ -1420,7 +1420,7 @@ in the instruction; no base register, index register, or scaling factor can be a
 	  <td rowspan="2">Original</td>
 	  <td rowspan="2">A ModR/M byte follows the opcode and specifies the operand. The operand is either a
 	general-purpose register or a memory address. If it is a memory address, the address is
-	computed from a segment register and any of the following values: a base register, an
+	computed from a Segment register and any of the following values: a base register, an
 	index register, a scaling factor, or a displacement.</td>
 	</tr>
 	<tr>
@@ -1435,7 +1435,7 @@ in the instruction; no base register, index register, or scaling factor can be a
 	  byte follows the opcode and specifies the operand. The
 	  operand is either a
 	  x87 <abbr>FPU</abbr> stack register or a memory address. If it is a memory address, the address is
-	  computed from a segment register and any of the following values: a base register, an
+	  computed from a Segment register and any of the following values: a base register, an
 	  index register, a scaling factor, or a displacement.
           </td>
 	</tr>
@@ -1571,7 +1571,7 @@ in the instruction; no base register, index register, or scaling factor can be a
 	  <td rowspan="2">Original</td>
 	  <td rowspan="2">A ModR/M byte follows the opcode and specifies the operand. The operand is either
 an <abbr>MMX</abbr> technology register or a memory address. If it is a memory address, the address
-is computed from a segment register and any of the following values: a base register,
+is computed from a Segment register and any of the following values: a base register,
 an index register, a scaling factor, and a displacement.</td>
 	</tr>
 	<tr>
@@ -1594,7 +1594,7 @@ an index register, a scaling factor, and a displacement.</td>
 	<tr>
 	  <td><code>S</code></td>
 	  <td rowspan="2">Original</td>
-	  <td rowspan="2">The reg field of the ModR/M byte selects a segment
+	  <td rowspan="2">The reg field of the ModR/M byte selects a Segment
 	  register (only <code>MOV</code>&nbsp;(<code><a href="http://ref.x86asm.net/geek.html#x8C">8C</a></code>,
 	  <code><a href="http://ref.x86asm.net/geek.html#x8E">8E</a></code>)).</td>
 	</tr>
@@ -1657,7 +1657,7 @@ an index register, a scaling factor, and a displacement.</td>
 	  <td rowspan="2">Original</td>
 	  <td rowspan="2">A ModR/M byte follows the opcode and specifies the operand. The operand is either a
 128-bit <abbr>XMM</abbr> register or a memory address. If it is a memory address, the address is
-computed from a segment register and any of the following values: a base register, an
+computed from a Segment register and any of the following values: a base register, an
 index register, a scaling factor, and a displacement</td>
 	</tr>
 	<tr>
@@ -1696,8 +1696,8 @@ index register, a scaling factor, and a displacement</td>
 	  (<code>EDI</code>) address sizes are supported. In
 	  non-64-bit modes, only 32-bit (<code>EDI</code>) and
 	  16-bit (<code>DI</code>) address sizes are supported. The
-	  implicit <code>ES</code> segment register cannot be overriden by
-	  a segment prefix.</td>
+	  implicit <code>ES</code> Segment register cannot be overriden by
+	  a Segment prefix.</td>
 	</tr>
 	<tr>
 	  <td><code>m</code></td>
@@ -1717,8 +1717,8 @@ index register, a scaling factor, and a displacement</td>
       </tbody>
     </table><p></p>
 <p>The following abbreviations are used for addressing
-  methods only in case of direct segment registers and are accessible
-  only in <abbr>HTML</abbr> geek's editions as segment register's
+  methods only in case of direct Segment registers and are accessible
+  only in <abbr>HTML</abbr> geek's editions as Segment register's
   title. As for <a href="#Source_XML_Document_desc">source XML document</a>, they are used within
   <dfn>address</dfn> atribute of <dfn>syntax/dst</dfn> or
   <dfn>syntax/src</dfn> elements. All of them are added:
@@ -1728,19 +1728,19 @@ index register, a scaling factor, and a displacement</td>
 	<tr>
 	  <td><code>S2</code></td>
 	  <td>The two bits at bit index three of the opcode byte
-	  selects one of original four segment registers (for example,
+	  selects one of original four Segment registers (for example,
 	  <code><a href="http://ref.x86asm.net/geek.html#x06">PUSH&nbsp;ES</a></code>).</td>
 	</tr>
 	<tr>
 	  <td><code>S30</code></td>
 	  <td>The three least-significant bits of the opcode byte
-	  selects segment register <code>SS</code>, <code>FS</code>, or
+	  selects Segment register <code>SS</code>, <code>FS</code>, or
 	  <code>GS</code> (for example, <code><a href="http://ref.x86asm.net/geek.html#x0FB2">LSS</a></code>).</td>
 	</tr>
 	<tr>
 	  <td><code>S33</code></td>
 	  <td>The three bits at bit index three of the opcode byte
-	  selects segment register <code>FS</code> or <code>GS</code>
+	  selects Segment register <code>FS</code> or <code>GS</code>
 	  (for example, <code><a href="http://ref.x86asm.net/geek.html#x0FA0">PUSH&nbsp;FS</a></code>).
 	  </td>
 	</tr>

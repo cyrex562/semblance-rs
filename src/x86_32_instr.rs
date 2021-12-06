@@ -206,7 +206,7 @@ pub const X86_32_INSTRUCTIONS: [Operand;256] = [
     Operand::new(0xC7, 0, 0, "", NONE, NONE, 0),  /* mov (subcode 0 only) */
     Operand::new(0xC8, 8,  0, "enter",      IMM16,  IMM8, 0),
     Operand::new(0xC9, 8,  0, "leave", NONE, NONE, 0),
-    Operand::new(0xCA, 8,  0, "ret",        IMM16,  NONE,      OP_STOP|OP_FAR),    /* a change in bitness should only happen across segment boundaries */
+    Operand::new(0xCA, 8,  0, "ret",        IMM16,  NONE,      OP_STOP|OP_FAR),    /* a change in bitness should only happen across Segment boundaries */
     Operand::new(0xCB, 8,  0, "ret",        NONE,      NONE,      OP_STOP|OP_FAR),
     Operand::new(0xCC, 8,  0, "int3",       NONE,      NONE,      OP_STOP),
     Operand::new(0xCD, 8,  0, "int",        IMM8, NONE, 0),
@@ -238,7 +238,7 @@ pub const X86_32_INSTRUCTIONS: [Operand;256] = [
     Operand::new(0xE7, 8, -1, "out",        IMM,    AX, 0),
     Operand::new(0xE8, 8, -1, "call",       REL,    NONE,      OP_BRANCH),
     Operand::new(0xE9, 8, -1, "jmp",        REL,    NONE,      OP_BRANCH|OP_STOP),
-    Operand::new(0xEA, 8, -1, "jmp",        SEGPTR, NONE,      OP_FAR|OP_STOP),    /* a change in bitness should only happen across segment boundaries */
+    Operand::new(0xEA, 8, -1, "jmp",        SEGPTR, NONE,      OP_FAR|OP_STOP),    /* a change in bitness should only happen across Segment boundaries */
     Operand::new(0xEB, 8,  0, "jmp",        REL8,   NONE,      OP_BRANCH|OP_STOP),
     Operand::new(0xEC, 8,  8, "in",         AL,     DXS, 0),
     Operand::new(0xED, 8, -1, "in",         AX,     DXS, 0),

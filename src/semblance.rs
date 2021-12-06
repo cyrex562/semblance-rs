@@ -1,8 +1,8 @@
 
 // static inline const void *read_data(off_t offset)
-pub fn read_data(map: &Vec<u8>, offset: usize) -> Vec<u8> {
+pub fn read_data(map: &Vec<u8>, offset: usize, length: usize) -> Vec<u8> {
     // return map + offset;
-    map[offset..].to_vec()
+    map[offset..offset+length].to_vec()
 }
 
 pub fn read_byte(map: &Vec<u8>, offset: usize) -> u8 {

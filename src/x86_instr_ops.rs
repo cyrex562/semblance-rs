@@ -314,7 +314,7 @@ pub fn get_arg(ip: u32, p: &Vec<u8>, arg: &Argument, instr: &mut Instruction, bi
 
         if instr.addrsize != 16 && rm == 4 {
             /* SIB byte */
-            p++;
+            p += 1;
             instr.sib_scale = 1 << MODOF(p[0]);
             instr.sib_index = REGOF(p[0]);
             if instr.prefix & PREFIX_REXX {
@@ -945,8 +945,8 @@ pub fn print_arg(ip: &String, instr: &mut Instruction, i: i32, bits: i32) {
     }
     SEG16 => {
         if value > 5 {
-            // warn_at("Invalid segment register {}\n", value);
-            eprintln!("invalid segment register {}", value);
+            // warn_at("Invalid Segment register {}\n", value);
+            eprintln!("invalid Segment register {}", value);
         }
         get_seg16(&mut out, value as u16);
     }
@@ -1119,31 +1119,31 @@ pub fn get_instr(ip: u32, p: &mut Vec<u8>, instr: &mut Instruction, bits: i32) -
         else if ((p[len] & 3) == 1) { instr.prefix |= PREFIX_OP32; }
         len += get_sse_single(subcode, p[len+1], instr);
     } else if (opcode == 0xC5 && MODOF(p[len+1]) == 3 && bits != 16) {
-        len++;
+        len += 1;
         instr.vex = 1;
         instr.vex_reg = ~((p[len] >> 3) & 7);
         instr.vex_256 = (p[len] & 4) ? 1 : 0;
         if ((p[len] & 3) == 3) instr.prefix |= PREFIX_REPNE;
         else if ((p[len] & 3) == 2) instr.prefix |= PREFIX_REPE;
         else if ((p[len] & 3) == 1) instr.prefix |= PREFIX_OP32;
-        len++;
+        len += 1;
         len += get_0f_instr(p+len, instr);
     } else if (bits == 64 && instructions64[opcode].name[0]) {
         instr.op = instructions64[opcode];
     } else if (bits != 64 && instructions[opcode].name[0]) {
         instr.op = instructions[opcode];
     } else {
-        byte subcode = REGOF(p[len+1]);
+        u8 subcode = REGOF(p[len+1]);
 
         /* do we have a member of an instruction group? */
         if (opcode == 0x0F) {
-            len++;
+            len += 1;
             len += get_0f_instr(p+len, instr);
         } else if (opcode >= 0xD8 && opcode <= 0xDF) {
             len += get_fpu_instr(p+len, &instr.op);
         } else {
             unsigned i;
-            for (i=0; i<sizeof(INSTRUCTIONS_GROUP)/sizeof(struct op); i++) {
+            for (i=0; i<sizeof(INSTRUCTIONS_GROUP)/sizeof(struct op); i += 1) {
                 if (opcode == INSTRUCTIONS_GROUP[i].opcode &&
                     subcode == INSTRUCTIONS_GROUP[i].subcode) {
                     instr.op = INSTRUCTIONS_GROUP[i];
@@ -1165,7 +1165,7 @@ pub fn get_instr(ip: u32, p: &mut Vec<u8>, instr: &mut Instruction, bits: i32) -
         }
     }
 
-    len++;
+    len += 1;
 
     /* resolve the size */
     if (instr.op.size == -1) {
@@ -1280,7 +1280,7 @@ pub fn print_instr(ip: &String, p: &Vec<u8>, len: i32, flags: u8, instr: &Instru
     /* did we find too many prefixes? */
     if get_prefix(instr.op.opcode, bits) {
         if get_prefix(instr.op.opcode, bits) & PREFIX_SEG_MASK {
-            eprintln!("Multiple segment prefixes found: {}, {}. Skipping to next instruction.",
+            eprintln!("Multiple Segment prefixes found: {}, {}. Skipping to next instruction.",
                       SEG16[(instr.prefix & PREFIX_SEG_MASK) - 1], instr.op.name);
         }
         else {
@@ -1296,7 +1296,7 @@ pub fn print_instr(ip: &String, p: &Vec<u8>, len: i32, flags: u8, instr: &Instru
 
     /* okay, now we begin dumping */
     if (flags & INSTR_JUMP) && (opts & COMPILABLE) {
-        /* output a label, which is like an address but without the segment prefix */
+        /* output a label, which is like an address but without the Segment prefix */
         /* FIXME: check masm */
         if asm_syntax == NASM {
             print!(".");
@@ -1406,7 +1406,7 @@ pub fn print_instr(ip: &String, p: &Vec<u8>, len: i32, flags: u8, instr: &Instru
     /* if we have more than 7 bytes on this line, wrap around */
     if (len > 7 && !(opts & NO_SHOW_RAW_INSN)) {
         printf("\n\t\t");
-        for (i=7; i<len; i++) {
+        for (i=7; i<len; i += 1) {
             printf("%02x", p[i]);
             if (i < len) printf(" ");
         }

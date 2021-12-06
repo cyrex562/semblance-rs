@@ -21,6 +21,9 @@ mod x86_sse_single_instr;
 mod x86_instr_arg_type;
 mod x86_instr_prefix;
 mod x86_mod_rm;
+mod mz;
+mod ne;
+mod ne_header;
 
 // int main(int argc, char *argv[]){
 //     int opt;

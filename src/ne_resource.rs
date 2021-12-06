@@ -26,29 +26,29 @@
 #include <string.h>
 
 #include "semblance.h"
-#include "ne_h.rs"
+#include "ne"
 
 #pragma pack(1)
 
 struct header_bitmap_info {
-    dword biSize;           /* 00 */
-    dword biWidth;          /* 04 */
-    dword biHeight;         /* 08 */
-    word  biPlanes;         /* 0c */
-    word  biBitCount;       /* 0e */
-    dword biCompression;    /* 10 */
-    dword biSizeImage;      /* 14 */
-    dword biXPelsPerMeter;  /* 18 */
-    dword biYPelsPerMeter;  /* 1c */
-    dword biClrUsed;        /* 20 */
-    dword biClrImportant;   /* 24 */
+    u32 biSize;           /* 00 */
+    u32 biWidth;          /* 04 */
+    u32 biHeight;         /* 08 */
+    u16  biPlanes;         /* 0c */
+    u16  biBitCount;       /* 0e */
+    u32 biCompression;    /* 10 */
+    u32 biSizeImage;      /* 14 */
+    u32 biXPelsPerMeter;  /* 18 */
+    u32 biYPelsPerMeter;  /* 1c */
+    u32 biClrUsed;        /* 20 */
+    u32 biClrImportant;   /* 24 */
 };
 
 STATIC_ASSERT(sizeof(struct header_bitmap_info) == 0x28);
 
-static char *dup_string_resource(off_t offset)
+static char *dup_string_resource(usize offset)
 {
-    byte length = read_byte(offset);
+    u8 length = read_byte(offset);
     char *ret = malloc(length + 1);
     memcpy(ret, read_data(offset + 1), length);
     ret[length] = 0;
@@ -56,10 +56,10 @@ static char *dup_string_resource(off_t offset)
 }
 
 /* length-indexed; returns  */
-static void print_escaped_string(off_t offset, long length){
+static void print_escaped_string(usize offset, long length){
     putchar('"');
-    while (length--){
-        char c = read_byte(offset++);
+    while (length -= 1){
+        char c = read_byte(offset += 1);
         if (c == '\t')
             printf("\\t");
         else if (c == '\n')
@@ -79,11 +79,11 @@ static void print_escaped_string(off_t offset, long length){
 }
 
 /* null-terminated; returns the end of the string */
-static off_t print_escaped_string0(off_t offset)
+static usize print_escaped_string0(usize offset)
 {
     char c;
     putchar('"');
-    while ((c = read_byte(offset++))){
+    while ((c = read_byte(offset += 1))){
         if (c == '\t')
             printf("\\t");
         else if (c == '\n')
@@ -103,7 +103,7 @@ static off_t print_escaped_string0(off_t offset)
     return offset;
 }
 
-static void print_timestamp(dword high, dword low){
+static void print_timestamp(u32 high, u32 low){
     /* TODO */
 };
 
@@ -148,7 +148,7 @@ static const char *const rsrc_bmp_compression[] = {
     0
 };
 
-static void print_rsrc_flags(word flags){
+static void print_rsrc_flags(u16 flags){
     if (flags & 0x0010)
         printf(", moveable");
     if (flags & 0x0020)
@@ -200,12 +200,12 @@ static const char *const rsrc_dialog_style[] = {
     0
 };
 
-static void print_rsrc_dialog_style(dword flags){
+static void print_rsrc_dialog_style(u32 flags){
     int i;
     char buffer[1024];
     buffer[0] = 0;
 
-    for (i=0;i<32;i++){
+    for (i=0;i<32;i += 1){
         if (flags & (1<<i)){
             strcat(buffer, ", ");
             strcat(buffer, rsrc_dialog_style[i]);
@@ -327,7 +327,7 @@ static const char *const rsrc_combobox_style[] = {
     0
 };
 
-static void print_rsrc_control_style(byte class, dword flags){
+static void print_rsrc_control_style(u8 class, u32 flags){
     int i;
     char buffer[1024];
     buffer[0] = 0;
@@ -369,7 +369,7 @@ static void print_rsrc_control_style(byte class, dword flags){
         else if ((flags & 3) == 2) strcpy(buffer, "ES_RIGHT");
         else if ((flags & 3) == 3) strcpy(buffer, "(unknown type 3)");
 
-        for (i=2; i<16; i++){
+        for (i=2; i<16; i += 1){
             if (flags & (1<<i)){
                 strcat(buffer, ", ");
                 strcat(buffer, rsrc_edit_style[i]);
@@ -383,7 +383,7 @@ static void print_rsrc_control_style(byte class, dword flags){
         else
             sprintf(buffer, "(unknown type %d)", flags & 0x001f);
 
-        for (i=5; i<14; i++){
+        for (i=5; i<14; i += 1){
             if (flags & (1<<i)){
                 strcat(buffer, ", ");
                 strcat(buffer, rsrc_static_style[i]);
@@ -392,7 +392,7 @@ static void print_rsrc_control_style(byte class, dword flags){
         break;
 
     case 0x83: /* ListBox */
-        for (i=0; i<16; i++){
+        for (i=0; i<16; i += 1){
             if (flags & (1<<i)){
                 strcat(buffer, ", ");
                 strcat(buffer, rsrc_listbox_style[i]);
@@ -435,7 +435,7 @@ static void print_rsrc_control_style(byte class, dword flags){
         else if ((flags & 3) == 3)
             strcat(buffer, ", CBS_DROPDOWNLIST");
         
-        for (i=4; i<15; i++){
+        for (i=4; i<15; i += 1){
             if ((flags & (1<<i)) && rsrc_combobox_style[i]){
                 strcat(buffer, ", ");
                 strcat(buffer, rsrc_combobox_style[i]);
@@ -450,7 +450,7 @@ static void print_rsrc_control_style(byte class, dword flags){
     }
 
     /* and finally, WS_ flags */
-    for (i=16; i<32; i++){
+    for (i=16; i<32; i += 1){
         if (flags & (1<<i)){
             strcat(buffer, ", ");
             strcat(buffer, rsrc_dialog_style[i]);
@@ -461,13 +461,13 @@ static void print_rsrc_control_style(byte class, dword flags){
 }
 
 struct dialog_control {
-    word x;
-    word y;
-    word width;
-    word height;
-    word id;
-    dword style;
-    byte class;
+    u16 x;
+    u16 y;
+    u16 width;
+    u16 height;
+    u16 id;
+    u32 style;
+    u8 class;
 };
 
 static const char *const rsrc_dialog_class[] = {
@@ -480,18 +480,18 @@ static const char *const rsrc_dialog_class[] = {
     0
 };
 
-static off_t print_rsrc_menu_items(int depth, off_t offset)
+static usize print_rsrc_menu_items(int depth, usize offset)
 {
-    word flags, id;
+    u16 flags, id;
     char buffer[1024];
     int i;
 
-    while (1) {
+    loop {
         flags = read_word(offset);
         offset += 2;
 
         printf("        ");
-        for (i = 0; i < depth; i++) printf("  ");
+        for (i = 0; i < depth; i += 1) printf("  ");
         if (!(flags & 0x0010)) {
             /* item ID */
             id = read_word(offset);
@@ -533,29 +533,29 @@ static off_t print_rsrc_menu_items(int depth, off_t offset)
  * describing the second. However it seems the second is always
  * a VS_FIXEDFILEINFO header, so we ignore most of those details. */
 struct version_header {
-    word length;            /* 00 */
-    word value_length;      /* 02 - always 52 (0x34), the length of the second header */
+    u16 length;            /* 00 */
+    u16 value_length;      /* 02 - always 52 (0x34), the length of the second header */
     /* the "type" field given by Windows is missing */
-    byte string[16];        /* 04 - the fixed string VS_VERSION_INFO\0 */
-    dword magic;            /* 14 - 0xfeef04bd */
-    word struct_2;          /* 18 - seems to always be 1.0 */
-    word struct_1;          /* 1a */
+    u8 string[16];        /* 04 - the fixed string VS_VERSION_INFO\0 */
+    u32 magic;            /* 14 - 0xfeef04bd */
+    u16 struct_2;          /* 18 - seems to always be 1.0 */
+    u16 struct_1;          /* 1a */
     /* 1.2.3.4 &c. */
-    word file_2;            /* 1c */
-    word file_1;            /* 1e */
-    word file_4;            /* 20 */
-    word file_3;            /* 22 */
-    word prod_2;            /* 24 - always the same as the above? */
-    word prod_1;            /* 26 */
-    word prod_4;            /* 28 */
-    word prod_3;            /* 2a */
-    dword flags_file_mask;  /* 2c - always 2 or 3f...? */
-    dword flags_file;       /* 30 */
-    dword flags_os;         /* 34 */
-    dword flags_type;       /* 38 */
-    dword flags_subtype;    /* 3c */
-    dword date_1;           /* 40 - always 0? */
-    dword date_2;           /* 44 */
+    u16 file_2;            /* 1c */
+    u16 file_1;            /* 1e */
+    u16 file_4;            /* 20 */
+    u16 file_3;            /* 22 */
+    u16 prod_2;            /* 24 - always the same as the above? */
+    u16 prod_1;            /* 26 */
+    u16 prod_4;            /* 28 */
+    u16 prod_3;            /* 2a */
+    u32 flags_file_mask;  /* 2c - always 2 or 3f...? */
+    u32 flags_file;       /* 30 */
+    u32 flags_os;         /* 34 */
+    u32 flags_type;       /* 38 */
+    u32 flags_subtype;    /* 3c */
+    u32 date_1;           /* 40 - always 0? */
+    u32 date_2;           /* 44 */
 };
 
 STATIC_ASSERT(sizeof(struct version_header) == 0x48);
@@ -604,7 +604,7 @@ static void print_rsrc_version_flags(struct version_header header){
     int i;
     
     buffer[0] = '\0';
-    for (i=0;i<6;i++){
+    for (i=0;i<6;i += 1){
         if (header.flags_file & (1<<i)){
             strcat(buffer, ", ");
             strcat(buffer, rsrc_version_file[i]);
@@ -662,9 +662,9 @@ static void print_rsrc_version_flags(struct version_header header){
     }
 };
 
-static void print_rsrc_strings(off_t offset, off_t end)
+static void print_rsrc_strings(usize offset, usize end)
 {
-    word length;
+    u16 length;
 
     while (offset < end)
     {
@@ -689,9 +689,9 @@ static void print_rsrc_strings(off_t offset, off_t end)
     }
 };
 
-static void print_rsrc_stringfileinfo(off_t offset, off_t end)
+static void print_rsrc_stringfileinfo(usize offset, usize end)
 {
-    word length;
+    u16 length;
     unsigned int lang = 0;
     unsigned int codepage = 0;
 
@@ -710,12 +710,12 @@ static void print_rsrc_stringfileinfo(off_t offset, off_t end)
     }
 };
 
-static void print_rsrc_varfileinfo(off_t offset, off_t end)
+static void print_rsrc_varfileinfo(usize offset, usize end)
 {
     while (offset < end)
     {
         /* first length is redundant */
-        word length = read_word(offset + 2), i;
+        u16 length = read_word(offset + 2), i;
         offset += 16;
         for (i = 0; i < length; i += 4)
             printf("    Var (lang=%04x, codepage=%04x)\n", read_word(offset + i), read_word(offset + i + 2));
@@ -723,7 +723,7 @@ static void print_rsrc_varfileinfo(off_t offset, off_t end)
     }
 };
 
-static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_id)
+static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id)
 {
     switch (type)
     {
@@ -763,7 +763,7 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
 
     case 0x8004: /* Menu */
     {
-        word extended = read_word(offset);
+        u16 extended = read_word(offset);
 
         if (extended > 1) {
             warn("Unknown menu version %d\n",extended);
@@ -786,9 +786,9 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
     }
     case 0x8005: /* Dialog box */
     {
-        byte count;
-        word font_size;
-        dword style = read_dword(offset);
+        u8 count;
+        u16 font_size;
+        u32 style = read_dword(offset);
         print_rsrc_dialog_style(style);
         count = read_byte(offset + 4);
         printf("    Position: (%d, %d)\n", read_word(offset + 5), read_word(offset + 7));
@@ -811,7 +811,7 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
         }
         putchar('\n');
 
-        while (count--){
+        while (count -= 1){
             const struct dialog_control *control = read_data(offset);
             offset += sizeof(*control);
 
@@ -846,12 +846,12 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
     break;
     case 0x8006: /* String */
     {
-        off_t cursor = offset;
+        usize cursor = offset;
         int i = 0;
 
         while (cursor < offset + length)
         {
-            byte str_length = read_byte(cursor++);
+            u8 str_length = read_byte(cursor += 1);
             if (str_length)
             {
                 printf("    %3d (0x%06lx): ", i + ((rn_id & (~0x8000))-1)*16, cursor);
@@ -859,7 +859,7 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
                 putchar('\n');
                 cursor += str_length;
             }
-            i++;
+            i += 1;
         }
     }
     break;
@@ -870,7 +870,7 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
     case 0x8009: /* Accelerator table */
     {
         /* This format seems to be similar but older. Five bytes per
-         * entry, in the format:
+         * Entry, in the format:
          * [byte] - flags
          * [word] - key
          * [word] - id
@@ -880,7 +880,7 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
          * but we have C0 control codes. So the mapping must be different
          * than it is for current accelerator tables.
          */
-        byte flags;
+        u8 flags;
 
         do {
             flags = read_byte();
@@ -916,14 +916,14 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
          * resource. Therefore we only list the components this refers to.
          * Fortunately, the headers are different but the relevant information
          * is stored in the same bytes. */
-        word count = read_word(offset + 4);
+        u16 count = read_word(offset + 4);
         offset += 6;
         printf("    Resources: ");
-        if (count--) {
+        if (count -= 1) {
             printf("#%d", read_word(offset + 12));
             offset += 14;
         }
-        while (count--) {
+        while (count -= 1) {
             printf(", #%d", read_word(offset + 12));
             offset += 14;
         }
@@ -933,7 +933,7 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
     case 0x8010: /* Version */
     {
         const struct version_header *header = read_data(offset);
-        const off_t end = offset + header.length;
+        const usize end = offset + header.length;
 
         if (header.value_length != 52)
             warn("Version header length is %d (expected 52).\n", header.value_length);
@@ -960,8 +960,8 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
 
         while (offset < end)
         {
-            word info_length = read_word(offset);
-            word value_length = read_word(offset + 2);
+            u16 info_length = read_word(offset);
+            u16 value_length = read_word(offset + 2);
             const char *key = read_data(offset + 4);
 
             if (value_length)
@@ -981,7 +981,7 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
     }
     default:
     {
-        off_t cursor = offset;
+        usize cursor = offset;
         char len;
         int i;
         /* hexl-style dump */
@@ -990,7 +990,7 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
             len = min(offset + length - cursor, 16);
             
             printf("    %lx:", cursor);
-            for (i=0; i<16; i++){
+            for (i=0; i<16; i += 1){
                 if (!(i & 1))
                     /* Since this is 16 bits, we put a space after (before) every other two bytes. */
                     putchar(' ');
@@ -1000,7 +1000,7 @@ static void print_rsrc_resource(word type, off_t offset, size_t length, word rn_
                     printf("  ");
             }
             printf("  ");
-            for (i=0; i<len; i++){
+            for (i=0; i<len; i += 1){
                 char c = read_byte(cursor + i);
                 putchar(isprint(c) ? c : '.');
             }
@@ -1020,7 +1020,7 @@ static int filter_resource(const char *type, const char *id){
     if (!resource_filters_count)
         return 1;
 
-    for (i = 0; i < resource_filters_count; ++i){
+    for (i = 0; i < resource_filters_count;  += 1i){
         const char *filter_type = resource_filters[i], *p;
         size_t len = strlen(type);
 
@@ -1035,7 +1035,7 @@ static int filter_resource(const char *type, const char *id){
             continue;
 
         p = filter_type + len;
-        while (*p == ' ') ++p;
+        while (*p == ' ')  += 1p;
         if (!strcasecmp(id, p))
             return 1;
     }
@@ -1043,38 +1043,38 @@ static int filter_resource(const char *type, const char *id){
 }
 
 struct resource {
-    word offset;
-    word length;
-    word flags;
-    word id;
-    word handle; /* fixme: what is this? */
-    word usage; /* fixme: what is this? */
+    u16 offset;
+    u16 length;
+    u16 flags;
+    u16 id;
+    u16 handle; /* fixme: what is this? */
+    u16 usage; /* fixme: what is this? */
 };
 
 STATIC_ASSERT(sizeof(struct resource) == 0xc);
 
 struct type_header
 {
-    word type_id;
-    word count;
-    dword resloader; /* fixme: what is this? */
+    u16 type_id;
+    u16 count;
+    u32 resloader; /* fixme: what is this? */
     struct resource resources[1];
 };
 
-void print_rsrc(off_t start){
+void print_rsrc(usize start){
     const struct type_header *header;
-    word align = read_word(start);
+    u16 align = read_word(start);
     char *idstr;
-    word i;
+    u16 i;
 
-    header = read_data(start + sizeof(word));
+    header = read_data(start + sizeof(u16));
 
     while (header.type_id)
     {
         if (header.resloader)
             warn("resloader is nonzero: %08x\n", header.resloader);
 
-        for (i = 0; i < header.count; ++i)
+        for (i = 0; i < header.count;  += 1i)
         {
             const struct resource *rn = &header.resources[i];
 

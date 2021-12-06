@@ -1,198 +1,229 @@
-/*
- * MZ (DOS) files
- *
- * Copyright 2017-2018,2020 Zebediah Figura
- *
- * This file is part of Semblance.
- *
- * Semblance is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Semblance is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Semblance; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
- */
+use std::cmp::min;
+use libc::{memcpy, printf};
+use crate::semblance::{DISASSEMBLE, DISASSEMBLE_ALL, read_byte, read_data};
+use crate::x86_instr_def::{INSTR_FUNC, INSTR_JUMP, INSTR_SCANNED, INSTR_VALID, Instruction, MAX_INSTR, OP_BRANCH, OP_STOP};
 
-#include <stdlib.h>
-#include <string.h>
-
-#include "semblance.h"
-#include "x86_instr.h"
-#include "mz.h"
-
-#pragma pack(1)
-
-static void print_header(const struct header_mz *header) {
-    putchar('\n');
-    printf("Minimum extra allocation: %d bytes\n", header.e_minalloc * 16); /* 0a */
-    printf("Maximum extra allocation: %d bytes\n", header.e_maxalloc * 16); /* 0c */
-    printf("Initial stack location: %#x\n", realaddr(header.e_ss, header.e_sp)); /* 0e */
-    printf("Program entry point: %#x\n", realaddr(header.e_cs, header.e_ip)); /* 14 */
-    printf("Overlay number: %d\n", header.e_ovno); /* 1a */
+pub fn print_header(header: &header_mz) {
+    print!(
+        "\
+        Minimum extra allocation (0xa): {} bytes\
+        Maximum extra allocation (0xc): {} bytes\
+        Initial stack location (0xe): {:x}\
+        Program Entry point (0x14): {:x}\
+        Overlay number (0x1a): {}\
+        ", header.e_minalloc * 16, header.e_maxalloc * 16, realaddr(header.e_ss, header.e_sp), realaddr(header.e_cs, header.e_ip), header.e_ovno);
 }
 
-#ifdef USE_WARN
-#define warn_at(...) \
-    do { fprintf(stderr, "Warning: %05x: ", ip); \
-        fprintf(stderr, __VA_ARGS__); } while(0)
-#else
-#define warn_at(...)
-#endif
-
-static int print_mz_instr(dword ip, const byte *p, const byte *flags) {
-    struct instr instr = {0};
-    unsigned len;
-
-    char ip_string[7];
-
+pub fn print_mz_instr(ip: u32, p: &Vec<u8>, flags: &Vec<u8>) -> usize {
+    instr: Instruction = Default::default();
+    let mut len: usize;
+    let mut ip_string: String = String::new();
     len = get_instr(ip, p, &instr, 16);
-
-    sprintf(ip_string, "%05x", ip);
-
+    ip_string += fmt!("{:05x}", ip);
     print_instr(ip_string, p, len, flags[ip], &instr, NULL, 16);
-
     return len;
 }
 
-static void print_code(struct mz *mz) {
-    dword ip = 0;
-    byte buffer[MAX_INSTR];
+pub fn print_code(mz: &MzExecutable) {
+    let mut ip: u32 = 0;
+    let mut buffer: Vec<u8>;
+    print!(
+        "\
+        Code (start = 0x{:x}, length = 0x{:x}:\
+        ", mz.start, mz.length
+    );
 
-    putchar('\n');
-    printf("Code (start = 0x%x, length = 0x%x):\n", mz.start, mz.length);
-
-    while (ip < mz.length) {
+    while ip < mz.length as u32 {
         /* find a valid instruction */
-        if (!(mz.flags[ip] & INSTR_VALID)) {
-            if (opts & DISASSEMBLE_ALL) {
+        if !(mz.flags[ip] & INSTR_VALID) {
+            if opts & DISASSEMBLE_ALL {
                 /* still skip zeroes */
-                if (read_byte(mz.start + ip) == 0) {
-                    printf("      ...\n");
-                    ip++;
-                    while (read_byte(mz.start + ip) == 0) ip++;
+                if read_byte(&mz.file, (mz.start + ip) as usize) == 0 {
+                    print!("      ...\n");
+                    ip +=1;
+                    while read_byte(&mz.file, (mz.start + ip) as usize) == 0 { ip += 1; }
                 }
             } else {
-                printf("     ...\n");
-                while ((ip < mz.length) && !(mz.flags[ip] & INSTR_VALID)) ip++;
+                print!("     ...\n");
+                while (ip < mz.length as u32) && !(mz.flags[ip] & INSTR_VALID) {
+                    ip += 1;
+                }
             }
         }
 
-        if (ip >= mz.length) return;
+        if ip >= mz.length as u32 { return; }
 
         /* fixme: disassemble everything for now; we'll try to fix it later.
          * this is going to be a little more difficult since dos executables
          * unabashedly mix code and data, so we need to figure out a solution
          * for that. but we needed to do that anyway. */
 
-        memcpy(buffer, read_data(mz.start + ip), min(sizeof(buffer), mz.length - ip));
+        // memcpy(buffer, read_data(mz.start + ip), min(sizeof(buffer), mz.length - ip));
 
-        if (mz.flags[ip] & INSTR_FUNC) {
-            printf("\n");
-            printf("%05x <no name>:\n", ip);
+        buffer = read_data(&mz.file, (mz.start + ip) as usize, min(buffer.len(), mz.length - ip));
+
+        if mz.flags[ip] & INSTR_FUNC {
+            print!("\n");
+            print!("{:05x} <no name>:\n", ip);
         }
 
-        ip += print_mz_instr(ip, buffer, mz.flags);
+        ip += print_mz_instr(ip, &buffer, &mz.flags);
     }
 }
 
-static void scan_segment(dword ip, struct mz *mz) {
-    byte buffer[MAX_INSTR];
-    struct instr instr;
-    int instr_length;
-    int i;
+pub fn scan_segment(mut ip: u32, mz: &MzExecutable) {
+    let mut buffer: Vec<u8>;
+    let mut instr: Instruction = Instruction::default();
+    let mut i = 0;
 
-    if (ip > mz.length) {
-        warn_at("Attempt to scan past end of segment.\n");
+    if ip > mz.length as u32 {
+        eprint!("Attempt to scan past end of Segment.\n");
         return;
     }
 
-    if ((mz.flags[ip] & (INSTR_VALID|INSTR_SCANNED)) == INSTR_SCANNED)
+    if (mz.flags[ip] & (INSTR_VALID|INSTR_SCANNED)) == INSTR_SCANNED {
         warn_at("Attempt to scan byte that does not begin instruction.\n");
+    }
 
-    while (ip < mz.length) {
+    while ip < mz.length as u32 {
         /* check if we already read from here */
-        if (mz.flags[ip] & INSTR_SCANNED) return;
+        if mz.flags[ip] & INSTR_SCANNED {
+            return;
+        }
 
         /* read the instruction */
-        memset(buffer, 0, sizeof(buffer));  // fixme
-        memcpy(buffer, read_data(mz.start + ip), min(sizeof(buffer), mz.length - ip));
+        buffer = Vec::new();
+        buffer = read_data(&mz.file, (mz.start + ip) as usize, min(buffer.len(), mz.length - ip));
         instr_length = get_instr(ip, buffer, &instr, 16);
 
         /* mark the bytes */
         mz.flags[ip] |= INSTR_VALID;
-        for (i = ip; i < ip+instr_length && i < mz.length; i++) mz.flags[i] |= INSTR_SCANNED;
-
-        /* instruction which hangs over the minimum allocation */
-        if (i < ip+instr_length && i == mz.length) break;
-
-        /* handle conditional and unconditional jumps */
-        if (instr.op.flags & OP_BRANCH) {
-            /* near relative jump, loop, or call */
-            if (!strcmp(instr.op.name, "call"))
-                mz.flags[instr.args[0].value] |= INSTR_FUNC;
-            else
-                mz.flags[instr.args[0].value] |= INSTR_JUMP;
-
-            /* scan it */
-            scan_segment(instr.args[0].value, mz);
+        for i in ip .. ip + instr_length {
+            mz.flags[i] |= INSTR_SCANNED;
+            if i < mz.length as u32 {
+                break;
+            }
         }
 
-        if (instr.op.flags & OP_STOP)
+        /* instruction which hangs over the minimum allocation */
+        if i < ip+instr_length && i == mz.length { break; }
+
+        /* handle conditional and unconditional jumps */
+        if instr.op.flags & OP_BRANCH {
+            /* near relative jump, loop, or call */
+            if instr.op.name != "call" {
+                mz.flags[instr.args[0].value] |= INSTR_FUNC;
+            }
+            else {
+                mz.flags[instr.args[0].value] |= INSTR_JUMP;
+            }
+
+            /* scan it */
+            scan_segment(instr.args[0].value as u32, mz);
+        }
+
+        if instr.op.flags & OP_STOP {
             return;
+        }
 
         ip += instr_length;
     }
 
-    warn_at("Scan reached the end of segment.\n");
+    eprint!("Scan reached the end of Segment.\n");
 }
 
-static void read_code(struct mz *mz) {
-
+pub fn read_code(mz: &mut MzExecutable) {
     mz.entry_point = realaddr(mz.header.e_cs, mz.header.e_ip);
-    mz.length = ((mz.header.e_cp - 1) * 512) + mz.header.e_cblp;
-    if (mz.header.e_cblp == 0) mz.length += 512;
-    mz.flags = calloc(mz.length, sizeof(byte));
+    mz.length = (((mz.header.e_cp - 1) * 512) + mz.header.e_cblp) as usize;
+    if mz.header.e_cblp == 0 { mz.length += 512; }
+    // mz.flags = calloc(mz.length, sizeof(byte));
 
-    if (mz.entry_point > mz.length)
-        warn("Entry point %05x exceeds segment length (%05x)\n", mz.entry_point, mz.length);
+    if mz.entry_point > mz.length as u32 {
+        eprint!("Entry point {:05x} exceeds Segment length ({:05x})\n", mz.entry_point, mz.length);
+    }
     mz.flags[mz.entry_point] |= INSTR_FUNC;
     scan_segment(mz.entry_point, mz);
 }
 
-void readmz(struct mz *mz) {
-    mz.header = read_data(0);
+pub fn get_relocations(bytes: &Vec<u8>) -> Vec<Reloc> {
+    unimplemented!();
+}
+
+pub fn readmz(mz: &mut MzExecutable) {
+    mz.header = MzHeader::from_bytes(read_data(&mz.file, 0, -1).as_ref());
 
     /* read the relocation table */
-    mz.reltab = read_data(mz.header.e_lfarlc);
+    mz.reltab = get_relocations(read_data(&mz.file, mz.header.e_lfarlc as usize, -1).as_ref());
 
     /* read the code */
-    mz.start = mz.header.e_cparhdr * 16;
+    mz.start = (mz.header.e_cparhdr * 16) as u32;
     read_code(mz);
 }
 
-void freemz(struct mz *mz) {
-    free(mz.flags);
+pub fn dumpmz() {
+    let mut mz: MzExecutable = MzExecutable::default();
+    readmz(&mut mz);
+
+    print!("Module type: MZ (DOS executable)\n");
+
+    if mode & DUMPHEADER {
+        print_header(&mz.header);
+    }
+
+    if mode & DISASSEMBLE {
+        print_code(&mz);
+    }
 }
 
-void dumpmz(void) {
-    struct mz mz;
+pub fn realaddr(segment: u16, offset: u16) -> u32
+{
+    /// MZ (aka real-mode) addresses are "segmented", but not really. Just use the actual value.
+    return if segment < 0xfff0 {
+        ((segment * 0x10) + offset) as u32
+    } else {
+        /* relative segments >= 0xfff0 really point into PSP */
+        ((segment * 0x10) + offset - 0x100000) as u32
+    }
+}
 
-    readmz(&mz);
 
-    printf("Module type: MZ (DOS executable)\n");
+#[derive(Clone,Debug,Default)]
+pub struct MzHeader {
+    e_magic: u16,      /* 00: MZ Header signature */
+    e_cblp: u16,       /* 02: Bytes on last page of file */
+    e_cp: u16,         /* 04: Pages in file */
+    e_crlc: u16,       /* 06: Relocations */
+    e_cparhdr: u16,    /* 08: Size of header in paragraphs */
+    e_minalloc: u16,   /* 0a: Minimum extra paragraphs needed */
+    e_maxalloc: u16,   /* 0c: Maximum extra paragraphs needed */
+    e_ss: u16,         /* 0e: Initial (relative) SS value */
+    e_sp: u16,         /* 10: Initial SP value */
+    e_csum: u16,       /* 12: Checksum */
+    e_ip: u16,         /* 14: Initial IP value */
+    e_cs: u16,         /* 16: Initial (relative) CS value */
+    e_lfarlc: u16,     /* 18: File address of relocation table */
+    e_ovno: u16,       /* 1a: Overlay number */
+}
 
-    if (mode & DUMPHEADER)
-        print_header(mz.header);
+impl MzHeader {
+    pub fn from_bytes(bytes: &Vec<u8>) -> Self {
+        unimplemented!()
+    }
+}
 
-    if (mode & DISASSEMBLE)
-        print_code(&mz);
+#[derive(Clone,Debug,Default)]
+pub struct Reloc {
+    offset: u16,
+    segment: u16,
+}
 
-    freemz(&mz);
+#[derive(Clone,Debug,Default)]
+pub struct MzExecutable {
+    pub file: Vec<u8>,
+    pub header: MzHeader,
+    pub reltab: Vec<Reloc>,
+    pub entry_point: u32,
+    pub flags: Vec<u8>,
+    pub start: u32,
+    pub length: usize
 }

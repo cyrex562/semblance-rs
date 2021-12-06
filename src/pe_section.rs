@@ -149,7 +149,7 @@ pub fn get_arg_comment(map: &Vec<u8>, sec: &Section, end_ip: u32, instr: &Instru
     }
 
     /* Relocate anything that points inside the image's address space or that
-     * has a relocation entry. */
+     * has a relocation Entry. */
     if (tsec = addr2section(rel_value, pe)) || (sec.instr_flags[arg.ip - sec.address] & INSTR_RELOC)
     {
         comment = get_imported_name(rel_value, pe);
@@ -218,7 +218,7 @@ pub fn print_pe_instr(sec: &Section, ip: u32, p: &Vec<u8>, pe: &PortableExecutab
     /* Check for relocations and imported names. PE separates the two concepts:
      * imported names are done by jumping into a block in .idata which is
      * relocated, and relocations proper are scattered throughout code sections
-     * and relocated according to the contents of .reloc. */
+     * and relocated according to the contents of .Reloc. */
 
     let mut comment = get_arg_comment(map, sec, ip + len, &instr, &instr.args[0], pe);
     if comment.is_some() {
@@ -231,10 +231,10 @@ pub fn print_pe_instr(sec: &Section, ip: u32, p: &Vec<u8>, pe: &PortableExecutab
 }
 
 static void print_disassembly(const struct section *sec, const struct pe *pe) {
-    dword relip = 0, ip;
+    u32 relip = 0, ip;
     qword absip;
 
-    byte buffer[MAX_INSTR];
+    u8 buffer[MAX_INSTR];
 
     while (relip < sec.length && relip < sec.min_alloc) {
         /* find a valid instruction */
@@ -243,19 +243,19 @@ static void print_disassembly(const struct section *sec, const struct pe *pe) {
                 /* still skip zeroes */
                 if (read_byte(sec.offset + relip) == 0) {
                     printf("     ...\n");
-                    relip++;
-                    while (read_byte(sec.offset + relip) == 0) relip++;
+                    relip += 1;
+                    while (read_byte(sec.offset + relip) == 0) relip += 1;
                 }
             } else {
                 printf("     ...\n");
-                while ((relip < sec.length) && (relip < sec.min_alloc) && !(sec.instr_flags[relip] & INSTR_VALID)) relip++;
+                while ((relip < sec.length) && (relip < sec.min_alloc) && !(sec.instr_flags[relip] & INSTR_VALID)) relip += 1;
             }
         }
 
         ip = relip + sec.address;
         if (relip >= sec.length || relip >= sec.min_alloc) return;
 
-        /* Instructions can "hang over" the end of a segment.
+        /* Instructions can "hang over" the end of a Segment.
          * Zero should be supplied. */
         memset(buffer, 0, sizeof(buffer));
         memcpy(buffer, read_data(sec.offset + relip), min(sizeof(buffer), sec.length - relip));
@@ -276,12 +276,12 @@ static void print_disassembly(const struct section *sec, const struct pe *pe) {
 }
 
 static void print_data(const struct section *sec, struct pe *pe) {
-    dword relip = 0;
+    u32 relip = 0;
     qword absip;
 
     /* Page alignment means that (contrary to NE) sections are going to end with
      * a bunch of annoying zeroes. So don't read past the minimum allocation. */
-    dword length = min(sec.length, sec.min_alloc);
+    u32 length = min(sec.length, sec.min_alloc);
 
     for (relip = 0; relip < length; relip += 16) {
         int len = min(length-relip, 16);
@@ -292,14 +292,14 @@ static void print_data(const struct section *sec, struct pe *pe) {
             absip += pe.imagebase;
 
         printf("%8lx", absip);
-        for (i=0; i<16; i++) {
+        for (i=0; i<16; i += 1) {
             if (i < len)
                 printf(" %02x", read_byte(sec.offset + relip + i));
             else
                 printf("   ");
         }
         printf("  ");
-        for (i = 0; i < len; ++i)
+        for (i = 0; i < len;  += 1i)
         {
             char c = read_byte(sec.offset + relip + i);
             putchar(isprint(c) ? c : '.');
@@ -308,11 +308,11 @@ static void print_data(const struct section *sec, struct pe *pe) {
     }
 }
 
-static void scan_segment(dword ip, struct pe *pe) {
+static void scan_segment(u32 ip, struct pe *pe) {
     struct section *sec = addr2section(ip, pe);
-    dword relip;
+    u32 relip;
 
-    byte buffer[MAX_INSTR];
+    u8 buffer[MAX_INSTR];
     struct instr instr;
     int instr_length;
     int i;
@@ -343,7 +343,7 @@ static void scan_segment(dword ip, struct pe *pe) {
 
         /* mark the bytes */
         sec.instr_flags[relip] |= INSTR_VALID;
-        for (i = relip; i < relip+instr_length && i < sec.min_alloc; i++) sec.instr_flags[i] |= INSTR_SCANNED;
+        for (i = relip; i < relip+instr_length && i < sec.min_alloc; i += 1) sec.instr_flags[i] |= INSTR_SCANNED;
 
         /* instruction which hangs over the minimum allocation */
         if (i < relip+instr_length && i == sec.min_alloc) break;
@@ -357,7 +357,7 @@ static void scan_segment(dword ip, struct pe *pe) {
             {
                 if (tsec.flags & 0x20)
                 {
-                    dword trelip = instr.args[0].value - tsec.address;
+                    u32 trelip = instr.args[0].value - tsec.address;
 
                     if (!strcmp(instr.op.name, "call"))
                         tsec.instr_flags[trelip] |= INSTR_FUNC;
@@ -374,14 +374,14 @@ static void scan_segment(dword ip, struct pe *pe) {
                 warn_at("Branch '%s' to byte %lx not in image.\n", instr.op.name, instr.args[0].value);
         }
 
-        for (i = relip; i < relip+instr_length; i++) {
+        for (i = relip; i < relip+instr_length; i += 1) {
             if (sec.instr_flags[i] & INSTR_RELOC) {
                 const struct reloc_pe *r = get_reloc(i + sec.address, pe);
                 struct section *tsec;
-                dword taddr;
+                u32 taddr;
 
                 if (!r)
-                    warn_at("Byte tagged INSTR_RELOC has no reloc; this is a bug.\n");
+                    warn_at("Byte tagged INSTR_RELOC has no Reloc; this is a bug.\n");
 
                 switch (r.type)
                 {
@@ -422,7 +422,7 @@ static void scan_segment(dword ip, struct pe *pe) {
     warn_at("Scan reached the end of section.\n");
 }
 
-static void print_section_flags(dword flags) {
+static void print_section_flags(u32 flags) {
     char buffer[1024] = "";
     int alignment = (flags & 0x00f00000) / 0x100000;
 
@@ -466,15 +466,15 @@ static void print_section_flags(dword flags) {
  * of them. Fortunately we actually have everything we need already. */
 
 void read_sections(struct pe *pe) {
-    dword entry_point = (pe.magic == 0x10b) ? pe.opt32.AddressOfEntryPoint : pe.opt64.AddressOfEntryPoint;
+    u32 entry_point = (pe.magic == 0x10b) ? pe.opt32.AddressOfEntryPoint : pe.opt64.AddressOfEntryPoint;
     int i;
 
     /* We already read the section header (unlike NE, we had to in order to read
      * everything else), so our job now is just to scan the section contents. */
 
     /* Relocations first. */
-    for (i = 0; i < pe.reloc_count; i++) {
-        dword address = pe.relocs[i].offset;
+    for (i = 0; i < pe.reloc_count; i += 1) {
+        u32 address = pe.relocs[i].offset;
         struct section *sec = addr2section(address, pe);
         if (!sec)
         {
@@ -497,9 +497,9 @@ void read_sections(struct pe *pe) {
         }
     }
 
-    for (i = 0; i < pe.export_count; i++)
+    for (i = 0; i < pe.export_count; i += 1)
     {
-        dword address = pe.exports[i].address;
+        u32 address = pe.exports[i].address;
         if (!address)
             continue;
         struct section *sec = addr2section(address, pe);
@@ -530,7 +530,7 @@ void print_sections(struct pe *pe) {
     int i;
     struct section *sec;
 
-    for (i = 0; i < pe.header.NumberOfSections; i++) {
+    for (i = 0; i < pe.header.NumberOfSections; i += 1) {
         sec = &pe.sections[i];
 
         putchar('\n');
@@ -555,7 +555,7 @@ void print_sections(struct pe *pe) {
             /* Don't print .rsrc by default. Some others should probably be
              * excluded, too, but .rsrc is a particularly bad offender since
              * large binaries might be put into it. */
-            if ((strcmp(sec.name, ".rsrc") && strcmp(sec.name, ".reloc"))
+            if ((strcmp(sec.name, ".rsrc") && strcmp(sec.name, ".Reloc"))
                 || (opts & FULL_CONTENTS))
                 print_data(sec, pe);
         }

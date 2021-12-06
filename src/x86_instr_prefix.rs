@@ -37,7 +37,7 @@ pub const INSTRUCTION_PREFIXES: [InstrPrefix;14] = [
     InstrPrefix::new(InstrPrefixGrp::Group2, 0x3e, "DS seg override"),
     InstrPrefix::new(InstrPrefixGrp::Group2, 0x26, "ES seg override"),
    InstrPrefix::new(InstrPrefixGrp::Group2, 0x64, "FS seg override"),
-   InstrPrefix::new(InstrPrefixGrp::Group2, 0x65, "GS segment override"),
+   InstrPrefix::new(InstrPrefixGrp::Group2, 0x65, "GS Segment override"),
     // branching hints
     // used only with JCC instr
     InstrPrefix::new(InstrPrefixGrp::Group2, 0x2e "branch not taken"),

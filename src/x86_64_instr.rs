@@ -205,7 +205,7 @@ pub const X86_64_INSTRUCTIONS: [Operand;256] = [
     Operand::new(0xC7, 0, 0, "", NONE, NONE, 0),  /* mov (subcode 0 only) */
     Operand::new(0xC8, 8,  0, "enter",      IMM16,  IMM8, 0),
     Operand::new(0xC9, 8,  0, "leave", NONE, NONE, 0),
-    Operand::new(0xCA, 8,  0, "ret",        IMM16,  NONE,      OP_STOP|OP_FAR),    /* a change in bitness should only happen across segment boundaries */
+    Operand::new(0xCA, 8,  0, "ret",        IMM16,  NONE,      OP_STOP|OP_FAR),    /* a change in bitness should only happen across Segment boundaries */
     Operand::new(0xCB, 8,  0, "ret",        NONE,      NONE,      OP_STOP|OP_FAR),
     Operand::new(0xCC, 8,  0, "int3",       NONE,      NONE,      OP_STOP),
     Operand::new(0xCD, 8,  0, "int",        IMM8, NONE, 0),

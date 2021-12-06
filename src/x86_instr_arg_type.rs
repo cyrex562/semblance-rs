@@ -26,7 +26,7 @@ pub enum X86ArgType {
    REG,        /* register */
    MMX,        /* MMX register */
    XMM,        /* SSE register */
-   SEG16,      /* segment register */
+   SEG16,      /* Segment register */
    REG32,      /* 32-bit only register, used for cr/dr/tr */
    CR32,       /* control register */
    DR32,       /* debug register */
