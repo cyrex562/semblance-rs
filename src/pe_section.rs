@@ -267,7 +267,7 @@ static void print_disassembly(const struct section *sec, const struct pe *pe) {
         if (sec.instr_flags[relip] & INSTR_FUNC) {
             const char *name = get_export_name(ip, pe);
             printf("\n");
-            printf("%lx <%s>:\n", absip, name ? name : "no name");
+            printf("%lx <{}>:\n", absip, name ? name : "no name");
         }
 
         relip += print_pe_instr(sec, ip, buffer, pe);
@@ -294,7 +294,7 @@ static void print_data(const struct section *sec, struct pe *pe) {
         printf("%8lx", absip);
         for (i=0; i<16; i += 1) {
             if (i < len)
-                printf(" %02x", read_byte(sec.offset + relip + i));
+                printf(" {:02x}", read_byte(sec.offset + relip + i));
             else
                 printf("   ");
         }
@@ -317,7 +317,7 @@ static void scan_segment(u32 ip, struct pe *pe) {
     int instr_length;
     int i;
 
-//    fprintf(stderr, "scanning at %x, in section %s\n", ip, sec ? sec.name : "<none>");
+//    eprint!( "scanning at %x, in section {}\n", ip, sec ? sec.name : "<none>");
 
     if (!sec) {
         warn_at("Attempt to scan byte not in image.\n");
@@ -368,10 +368,10 @@ static void scan_segment(u32 ip, struct pe *pe) {
                     scan_segment(instr.args[0].value, pe);
                 }
                 else
-                    warn_at("Branch '%s' to byte %lx in non-code section %s.\n",
+                    warn_at("Branch '{}' to byte %lx in non-code section {}.\n",
                             instr.op.name, instr.args[0].value, tsec.name);
             } else
-                warn_at("Branch '%s' to byte %lx not in image.\n", instr.op.name, instr.args[0].value);
+                warn_at("Branch '{}' to byte %lx not in image.\n", instr.op.name, instr.args[0].value);
         }
 
         for (i = relip; i < relip+instr_length; i += 1) {
@@ -458,7 +458,7 @@ static void print_section_flags(u32 flags) {
     if (flags & 0x40000000) strcat(buffer, ", readable");
     if (flags & 0x80000000) strcat(buffer, ", writable");
 
-    printf("    Flags: 0x%08x (%s)\n", flags, buffer+2);
+    printf("    Flags: 0x%08x ({})\n", flags, buffer+2);
     printf("    Alignment: %d (2**%d)\n", 1 << alignment, alignment);
 }
 
@@ -478,7 +478,7 @@ void read_sections(struct pe *pe) {
         struct section *sec = addr2section(address, pe);
         if (!sec)
         {
-            warn("Relocation at %#x isn't in a section?\n", address);
+            eprint!("Relocation at %#x isn't in a section?\n", address);
             continue;
         }
         if (sec.flags & 0x20) {
@@ -490,7 +490,7 @@ void read_sections(struct pe *pe) {
                 sec.instr_flags[address - sec.address] |= INSTR_RELOC;
                 break;
             default:
-                warn("%#x: Don't know how to handle relocation type %d\n",
+                eprint!("%#x: Don't know how to handle relocation type %d\n",
                     pe.relocs[i].offset, pe.relocs[i].type);
                 break;
             }
@@ -505,7 +505,7 @@ void read_sections(struct pe *pe) {
         struct section *sec = addr2section(address, pe);
         if (!sec)
         {
-            warn("Export %s at %#x isn't in a section?\n", pe.exports[i].name, pe.exports[i].address);
+            eprint!("Export {} at %#x isn't in a section?\n", pe.exports[i].name, pe.exports[i].address);
             continue;
         }
         if (sec.flags & 0x20 && !(address >= pe.dirs[0].address &&
@@ -518,7 +518,7 @@ void read_sections(struct pe *pe) {
     if (entry_point) {
         struct section *sec = addr2section(entry_point, pe);
         if (!sec)
-            warn("Entry point %#x isn't in a section?\n", entry_point);
+            eprint!("Entry point %#x isn't in a section?\n", entry_point);
         else if (sec.flags & 0x20) {
             sec.instr_flags[entry_point - sec.address] |= INSTR_FUNC;
             scan_segment(entry_point, pe);
@@ -534,14 +534,14 @@ void print_sections(struct pe *pe) {
         sec = &pe.sections[i];
 
         putchar('\n');
-        printf("Section %s (start = 0x%x, length = 0x%x, minimum allocation = 0x%x):\n",
+        printf("Section {} (start = 0x%x, length = 0x%x, minimum allocation = 0x%x):\n",
             sec.name, sec.offset, sec.length, sec.min_alloc);
         printf("    Address: %x\n", sec.address);
         print_section_flags(sec.flags);
 
         /* These fields should only be populated for object files (I think). */
         if (sec.reloc_offset || sec.reloc_count)
-            warn("Section %s has relocation data: offset = %x, count = %d\n",
+            eprint!("Section {} has relocation data: offset = %x, count = %d\n",
                 sec.name, sec.reloc_offset, sec.reloc_count);
 
         /* Sometimes the .text section is marked as both code and data. I've

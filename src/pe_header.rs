@@ -427,7 +427,7 @@ static void readpe(usize offset_pe, struct pe *pe)
         cdirs = pe.opt64.NumberOfRvaAndSizes;
         offset = offset_pe + 4 + sizeof(struct file_header) + sizeof(struct optional_header_pep);
     } else {
-        warn("Don't know how to read image type %#x\n", pe.magic);
+        eprint!("Don't know how to read image type %#x\n", pe.magic);
         exit(1);
     }
 
@@ -510,7 +510,7 @@ void dumppe(usize offset_pe) {
         pe_rel_addr = pe.header.Characteristics & 0x2000;
 
     printf("Module type: PE (Portable Executable)\n");
-    if (pe.name) printf("Module name: %s\n", pe.name);
+    if (pe.name) printf("Module name: {}\n", pe.name);
 
     if (mode & DUMPHEADER)
         print_header(&pe);
@@ -526,11 +526,11 @@ void dumppe(usize offset_pe) {
                     continue;
                 if (!pe_rel_addr)
                     address += pe.imagebase;
-                printf("\t%5d\t%#8x\t%s", pe.exports[i].ordinal, address,
+                printf("\t%5d\t%#8x\t{}", pe.exports[i].ordinal, address,
                     pe.exports[i].name ? pe.exports[i].name : "<no name>");
                 if (pe.exports[i].address >= pe.dirs[0].address
                         && pe.exports[i].address < (pe.dirs[0].address + pe.dirs[0].size))
-                    printf(" . %s", (const char *)read_data(addr2offset(pe.exports[i].address, &pe)));
+                    printf(" . {}", (const char *)read_data(addr2offset(pe.exports[i].address, &pe)));
                 putchar('\n');
             }
         } else
@@ -542,17 +542,17 @@ void dumppe(usize offset_pe) {
         if (pe.imports) {
             printf("Imported modules:\n");
             for (i = 0; i < pe.import_count; i += 1)
-                printf("\t%s\n", pe.imports[i].module);
+                printf("\t{}\n", pe.imports[i].module);
 
             printf("\nImported functions:\n");
             for (i = 0; i < pe.import_count; i += 1) {
-                printf("\t%s:\n", pe.imports[i].module);
+                printf("\t{}:\n", pe.imports[i].module);
                 for (j = 0; j < pe.imports[i].count; j += 1)
                 {
                     if (pe.imports[i].nametab[j].is_ordinal)
                         printf("\t\t<ordinal %u>\n", pe.imports[i].nametab[j].ordinal);
                     else
-                        printf("\t\t%s\n", pe.imports[i].nametab[j].name);
+                        printf("\t\t{}\n", pe.imports[i].nametab[j].name);
                 }
             }
         } else

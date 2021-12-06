@@ -211,7 +211,7 @@ static void print_rsrc_dialog_style(u32 flags){
             strcat(buffer, rsrc_dialog_style[i]);
         }
     }
-    printf("    Style: %s\n", buffer+2);
+    printf("    Style: {}\n", buffer+2);
 }
 
 static const char *const rsrc_button_type[] = {
@@ -457,7 +457,7 @@ static void print_rsrc_control_style(u8 class, u32 flags){
         }
     }
 
-    printf("%s\n", (buffer[0] == ',') ? (buffer+2) : buffer);
+    printf("{}\n", (buffer[0] == ',') ? (buffer+2) : buffer);
 }
 
 struct dialog_control {
@@ -515,7 +515,7 @@ static usize print_rsrc_menu_items(int depth, usize offset)
             sprintf(buffer+strlen(buffer), ", unknown flags 0x%04x", flags & 0xff00);
     
         if (buffer[0])
-            printf(" (%s)", buffer+2);
+            printf(" ({})", buffer+2);
         putchar('\n');
 
         /* if we have a popup, recurse */
@@ -614,7 +614,7 @@ static void print_rsrc_version_flags(struct version_header header){
         sprintf(buffer+strlen(buffer), ", (unknown flags 0x%04x)", header.flags_file & 0xffc0);
     printf("    File flags: ");
     if (header.flags_file)
-        printf("%s", buffer+2);
+        printf("{}", buffer+2);
 
     buffer[0] = '\0';
     if (header.flags_os == 0)
@@ -636,16 +636,16 @@ static void print_rsrc_version_flags(struct version_header header){
         default: sprintf(buffer+strlen(buffer), ", (unknown OS 0x%04x)", header.flags_os >> 16);
         }
     }
-    printf("\n    OS flags: %s\n", buffer+2);
+    printf("\n    OS flags: {}\n", buffer+2);
 
     if (header.flags_type <= 7)
-        printf("    Type: %s\n", rsrc_version_type[header.flags_type]);
+        printf("    Type: {}\n", rsrc_version_type[header.flags_type]);
     else
         printf("    Type: (unknown type %d)\n", header.flags_type);
 
     if (header.flags_type == 3){ /* driver */
         if (header.flags_subtype <= 12)
-            printf("    Subtype: %s driver\n", rsrc_version_subtype_drv[header.flags_subtype]);
+            printf("    Subtype: {} driver\n", rsrc_version_subtype_drv[header.flags_subtype]);
         else
             printf("    Subtype: (unknown subtype %d)\n", header.flags_subtype);
     } else if (header.flags_type == 4){ /* font */
@@ -747,7 +747,7 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             printf("    Planes: %d\n", header.biPlanes);
             printf("    Bit depth: %d\n", header.biBitCount);
             if (header.biCompression <= 13 && rsrc_bmp_compression[header.biCompression])
-                printf("    Compression: %s\n", rsrc_bmp_compression[header.biCompression]);
+                printf("    Compression: {}\n", rsrc_bmp_compression[header.biCompression]);
             else
                 printf("    Compression: (unknown value %d)\n", header.biCompression);
             printf("    Resolution: %dx%d pixels/meter\n",
@@ -758,7 +758,7 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             putchar('\n');
         }
         else
-            warn("Unknown bitmap header size %d.\n", read_dword(offset));
+            eprint!("Unknown bitmap header size %d.\n", read_dword(offset));
         break;
 
     case 0x8004: /* Menu */
@@ -766,12 +766,12 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
         u16 extended = read_word(offset);
 
         if (extended > 1) {
-            warn("Unknown menu version %d\n",extended);
+            eprint!("Unknown menu version %d\n",extended);
             break;
         }
         printf(extended ? "    Type: extended\n" : "    Type: standard\n");
         if (read_word(offset + 2) != extended*4)
-            warn("Unexpected offset value %d (expected %d).\n", read_word(offset + 2), extended * 4);
+            eprint!("Unexpected offset value %d (expected %d).\n", read_word(offset + 2), extended * 4);
         offset += 4;
 
         if (extended)
@@ -817,7 +817,7 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
 
             if (control.class & 0x80){
                 if (control.class <= 0x85)
-                    printf("    %s", rsrc_dialog_class[control.class & (~0x80)]);
+                    printf("    {}", rsrc_dialog_class[control.class & (~0x80)]);
                 else
                     printf("    (unknown class %d)", control.class);
             }
@@ -899,7 +899,7 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             if (flags & 0x10)
                 printf("Alt+");
             if (flags & 0x60)
-                warn("Unknown accelerator flags 0x%02x\n", flags & 0x60);
+                eprint!("Unknown accelerator flags 0x{:02x}\n", flags & 0x60);
 
             /* fixme: print the key itself */
 
@@ -936,13 +936,13 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
         const usize end = offset + header.length;
 
         if (header.value_length != 52)
-            warn("Version header length is %d (expected 52).\n", header.value_length);
+            eprint!("Version header length is %d (expected 52).\n", header.value_length);
         if (strcmp((char *)header.string, "VS_VERSION_INFO"))
-            warn("Version header is %.16s (expected VS_VERSION_INFO).\n", header.string);
+            eprint!("Version header is %.16s (expected VS_VERSION_INFO).\n", header.string);
         if (header.magic != 0xfeef04bd)
-            warn("Version magic number is 0x%08x (expected 0xfeef04bd).\n", header.magic);
+            eprint!("Version magic number is 0x%08x (expected 0xfeef04bd).\n", header.magic);
         if (header.struct_1 != 1 || header.struct_2 != 0)
-            warn("Version header version is %d.%d (expected 1.0).\n", header.struct_1, header.struct_2);
+            eprint!("Version header version is %d.%d (expected 1.0).\n", header.struct_1, header.struct_2);
         print_rsrc_version_flags(*header);
 
         printf("    File version:    %d.%d.%d.%d\n",
@@ -965,7 +965,7 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             const char *key = read_data(offset + 4);
 
             if (value_length)
-                warn("Value length is nonzero: %04x\n", value_length);
+                eprint!("Value length is nonzero: %04x\n", value_length);
 
             /* "type" is again omitted */
             if (!strcmp(key, "StringFileInfo"))
@@ -973,7 +973,7 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             else if (!strcmp(key, "VarFileInfo"))
                 print_rsrc_varfileinfo(offset + 16, offset + info_length);
             else
-                warn("Unrecognized file info key: %s\n", key);
+                eprint!("Unrecognized file info key: {}\n", key);
 
             offset += ((info_length + 3) & ~3);
         }
@@ -995,7 +995,7 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
                     /* Since this is 16 bits, we put a space after (before) every other two bytes. */
                     putchar(' ');
                 if (i<len)
-                    printf("%02x", read_byte(cursor + i));
+                    printf("{:02x}", read_byte(cursor + i));
                 else
                     printf("  ");
             }
@@ -1072,7 +1072,7 @@ void print_rsrc(usize start){
     while (header.type_id)
     {
         if (header.resloader)
-            warn("resloader is nonzero: %08x\n", header.resloader);
+            eprint!("resloader is nonzero: %08x\n", header.resloader);
 
         for (i = 0; i < header.count;  += 1i)
         {
@@ -1089,13 +1089,13 @@ void print_rsrc(usize start){
                 if ((header.type_id & (~0x8000)) < rsrc_types_count && rsrc_types[header.type_id & (~0x8000)]){
                     if (!filter_resource(rsrc_types[header.type_id & ~0x8000], idstr))
                         goto next;
-                    printf("\n%s", rsrc_types[header.type_id & ~0x8000]);
+                    printf("\n{}", rsrc_types[header.type_id & ~0x8000]);
                 } else {
                     char typestr[7];
                     sprintf(typestr, "0x%04x", header.type_id);
                     if (!filter_resource(typestr, idstr))
                         goto next;
-                    printf("\n%s", typestr);
+                    printf("\n{}", typestr);
                 }
             }
             else
@@ -1106,11 +1106,11 @@ void print_rsrc(usize start){
                     free(typestr);
                     goto next;
                 }
-                printf("\n\"%s\"", typestr);
+                printf("\n\"{}\"", typestr);
                 free(typestr);
             }
 
-            printf(" %s", idstr);
+            printf(" {}", idstr);
             printf(" (offset = 0x%x, length = %d [0x%x]", rn.offset << align, rn.length << align, rn.length << align);
             print_rsrc_flags(rn.flags);
             printf("):\n");

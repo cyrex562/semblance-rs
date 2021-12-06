@@ -83,7 +83,7 @@ mod ne_header;
 //             else if (!strcmp(optarg, "nasm"))
 //                 AsmSyntax = NASM;
 //             else {
-//                 fprintf(stderr, "Unrecognized disassembly option `%s'.\n", optarg);
+//                 eprint!( "Unrecognized disassembly option `{}'.\n", optarg);
 //                 return 1;
 //             }
 //             break;
@@ -105,12 +105,12 @@ mod ne_header;
 //             else if (optarg[0] == '0' || optarg[0] == 'n' || optarg[0] == 'N')
 //                 pe_rel_addr = 0;
 //             else {
-//                 fprintf(stderr, "Unrecognized --pe-rel-addr option `%s'.\n", optarg);
+//                 eprint!( "Unrecognized --pe-rel-addr option `{}'.\n", optarg);
 //                 return 1;
 //             }
 //             break;
 //         default:
-//             fprintf(stderr, "Usage: dumpne [options] <file>\n");
+//             eprint!( "Usage: dumpne [options] <file>\n");
 //             return 1;
 //         }
 //     }

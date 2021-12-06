@@ -31,8 +31,8 @@
 
 #ifdef USE_WARN
 #define warn_at(...) \
-    do { fprintf(stderr, "Warning: %d:%04x: ", cs, ip); \
-        fprintf(stderr, __VA_ARGS__); } while(0)
+    do { eprint!( "Warning: %d:%04x: ", cs, ip); \
+        eprint!( __VA_ARGS__); } while(0)
 #else
 #define warn_at(...)
 #endif
@@ -77,7 +77,7 @@ static const char *relocate_arg(const struct segment *seg, struct arg *arg, cons
 
     if (!r && arg.arg_type == SEGPTR) r = get_reloc(seg, arg.ip+2);
     if (!r) {
-        warn("%#x: Byte tagged INSTR_RELOC has no Reloc attached; this is a bug.\n", arg.ip);
+        eprint!("%#x: Byte tagged INSTR_RELOC has no Reloc attached; this is a bug.\n", arg.ip);
         return "?";
     }
 
@@ -90,10 +90,10 @@ static const char *relocate_arg(const struct segment *seg, struct arg *arg, cons
             snprintf(arg.string, sizeof(arg.string), "%d:%04x", r.tseg, r.toffset);
             return r.text;
         } else if (r.type == 1) {
-            snprintf(arg.string, sizeof(arg.string), "%s.%d", module, r.toffset);
+            snprintf(arg.string, sizeof(arg.string), "{}.%d", module, r.toffset);
             return get_imported_name(r.tseg, r.toffset, ne);
         } else if (r.type == 2) {
-            snprintf(arg.string, sizeof(arg.string), "%s.%.*s", module,
+            snprintf(arg.string, sizeof(arg.string), "{}.%.*s", module,
                 ne.nametab[r.toffset], &ne.nametab[r.toffset+1]);
             return NULL;
         }
@@ -113,19 +113,19 @@ static const char *relocate_arg(const struct segment *seg, struct arg *arg, cons
             close = "]";
         }
         if (r.type == 0) {
-            snprintf(arg.string, sizeof(arg.string), "%s%s%d%s", open, pfx, r.tseg, close);
+            snprintf(arg.string, sizeof(arg.string), "{}{}%d{}", open, pfx, r.tseg, close);
             return NULL;
         } else if (r.type == 1) {
-            snprintf(arg.string, sizeof(arg.string), "%s%s%s.%d%s", open, pfx, module, r.toffset, close);
+            snprintf(arg.string, sizeof(arg.string), "{}{}{}.%d{}", open, pfx, module, r.toffset, close);
             return get_imported_name(r.tseg, r.toffset, ne);
         } else if (r.type == 2) {
-            snprintf(arg.string, sizeof(arg.string), "%s%s%s.%.*s%s", open, pfx, module,
+            snprintf(arg.string, sizeof(arg.string), "{}{}{}.%.*s{}", open, pfx, module,
                 ne.nametab[r.toffset], &ne.nametab[r.toffset+1], close);
             return NULL;
         }
     }
 
-    warn("%d:%#x: unhandled relocation: size %d, type %d, argtype %x\n",
+    eprint!("%d:%#x: unhandled relocation: size %d, type %d, argtype %x\n",
         seg.cs, arg.ip, r.size, r.type, arg.arg_type);
 
     return NULL;
@@ -196,7 +196,7 @@ static void print_disassembly(const struct segment *seg, const struct ne *ne) {
         if (seg.instr_flags[ip] & INSTR_FUNC) {
             char *name = get_entry_name(cs, ip, ne);
             printf("\n");
-            printf("%d:%04x <%s>:\n", cs, ip, name ? name : "no name");
+            printf("%d:%04x <{}>:\n", cs, ip, name ? name : "no name");
             /* don't mark far functions—we can't reliably detect them
              * because of "push cs", and they should be evident anyway. */
         }
@@ -216,7 +216,7 @@ static void print_data(const struct segment *seg) {
         printf("%3d:%04x", seg.cs, ip);
         for (i=0; i<16; i += 1) {
             if (i < len)
-                printf(" %02x", read_byte(seg.start + ip + i));
+                printf(" {:02x}", read_byte(seg.start + ip + i));
             else
                 printf("   ");
         }
@@ -350,7 +350,7 @@ static void print_segment_flags(u16 flags) {
     if (flags & 0x2000) strcat(buffer, ", 32-bit");
 
     if (flags & 0xc608) sprintf(buffer+strlen(buffer), ", (unknown flags 0x%04x)", flags & 0xc608);
-    printf("    Flags: 0x%04x (%s)\n", flags, buffer);
+    printf("    Flags: 0x%04x ({})\n", flags, buffer);
 }
 
 static void read_reloc(const struct segment *seg, u16 index, struct ne *ne)
@@ -402,10 +402,10 @@ static void read_reloc(const struct segment *seg, u16 index, struct ne *ne)
     }
 
     if (type & ~7)
-        warn("%d: Relocation with unknown type flags %#x.\n", type);
+        eprint!("%d: Relocation with unknown type flags %#x.\n", type);
 
     if (size != 2 && size != 3 && size != 5)
-        warn("%d: Relocation with unknown size %#x.\n", size);
+        eprint!("%d: Relocation with unknown size %#x.\n", size);
 
     /* get the offset list */
     offset_cursor = offset;
@@ -414,12 +414,12 @@ static void read_reloc(const struct segment *seg, u16 index, struct ne *ne)
         /* One of my testcases has relocation offsets that exceed the length of
          * the Segment. Until we figure out what that's about, ignore them. */
         if (offset_cursor >= seg.length) {
-            warn("%d:%04x: Relocation offset exceeds Segment length (%04x).\n", seg.cs, offset_cursor, seg.length);
+            eprint!("%d:%04x: Relocation offset exceeds Segment length (%04x).\n", seg.cs, offset_cursor, seg.length);
             break;
         }
 
         if (seg.instr_flags[offset_cursor] & INSTR_RELOC) {
-            warn("%d:%04x: Infinite loop reading relocation data.\n", seg.cs, offset_cursor);
+            eprint!("%d:%04x: Infinite loop reading relocation data.\n", seg.cs, offset_cursor);
             r.offset_count = 0;
             return;
         }
@@ -537,7 +537,7 @@ void read_segments(usize start, struct ne *ne)
         /* do nothing */
     } else if (entry_ip >= ne.segments[entry_cs-1].length) {
         /* see note above under relocations */
-        warn("Entry point %d:%04x exceeds Segment length (%04x)\n", entry_cs, entry_ip, ne.segments[entry_cs-1].length);
+        eprint!("Entry point %d:%04x exceeds Segment length (%04x)\n", entry_cs, entry_ip, ne.segments[entry_cs-1].length);
     } else {
         ne.segments[entry_cs-1].instr_flags[entry_ip] |= INSTR_FUNC;
         scan_segment(entry_cs, entry_ip, ne);

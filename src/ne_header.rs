@@ -1,7 +1,7 @@
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Write};
 use proc_macro::bridge::PanicMessage::String;
-use crate::ne::{INT_TYPES, NeExecutable, NeExport};
+use crate::ne::{INT_TYPES, NeEntry, NeExecutable, NeExport, NeImportModule};
 use crate::semblance::{DEMANGLE, read_byte, read_data, read_word};
 
 pub fn print_flags(flags: u16){
@@ -94,7 +94,7 @@ pub fn print_export(ne: &NeExecutable) {
 
         if ne.enttab[i].segment == 0xfe {
             /* absolute value */
-            print!("\t%5d\t   %04x\t%s\n", i + 1, ne.enttab[i].offset, ne.enttab[i].name? ne.enttab[i].name: "<no name>");
+            print!("\t%5d\t   %04x\t{}\n", i + 1, ne.enttab[i].offset, ne.enttab[i].name? ne.enttab[i].name: "<no name>");
         }
         else if ne.enttab[i].segment {
             print!("\t{}\t{}:{:04x}\t{}\n", i + 1, ne.enttab[i].segment,
@@ -266,7 +266,7 @@ pub fn demangle(func: &mut String)  -> String {
     let mut p: String;
     let mut start: String;
     let mut end: String;
-    let mut prot: char = '';
+    let mut prot = String::new();
     let mut len: i32;
 
     if func[1] == '?'
@@ -285,7 +285,7 @@ pub fn demangle(func: &mut String)  -> String {
     /* Figure out the modifiers and calling convention. */
     // buffer[0] = 0;
     p = func[func.find("@@") + 2..];
-    len = demangle_protection(&mut buffer, &p, &prot, func);
+    len = demangle_protection(&mut buffer, &p, &mut prot, func);
     if !len {
         return func.clone();
     }
@@ -293,8 +293,8 @@ pub fn demangle(func: &mut String)  -> String {
 
     /* The next one seems to always be E or F. No idea why. */
     if prot >= 'A' && prot <= 'V' && !((prot-'A') & 2) {
-        if *p != 'E' && *p != 'F' {
-            warn("Unknown modifier %c for function %s\n", *p, func);
+        if p[0] != 'E' && p[0] != 'F' {
+            eprint!("Unknown modifier {} for function {}\n", p[0], func);
         }
         p = p[1..].to_string();
     }
@@ -309,7 +309,7 @@ pub fn demangle(func: &mut String)  -> String {
     p = p[1..].into();
     len = demangle_type(&mut known_names, &mut buffer, &mut p);
     if !len {
-        eprint!("Unknown return type {} for function {}\n", *p, func);
+        eprint!("Unknown return type {} for function {}\n", p[0], func);
         len = 1;
     }
     p = p[len..];
@@ -343,7 +343,7 @@ pub fn demangle(func: &mut String)  -> String {
                     buffer[&buffer.len() - 1] = 0;
                 }
                 if len > 1 && known_type_idx < 10 {
-                    known_types[known_type_idx += 1] = strdup( type );
+                    known_types[known_type_idx += 1] = var_type.clone;
                 }
                 else if !len {
                     eprint!("Unknown argument type {} for function {}\n", p, func);
@@ -360,12 +360,11 @@ pub fn demangle(func: &mut String)  -> String {
     // func = realloc(func, (strlen(buffer)+1)*sizeof(char));
     // strcpy(func, buffer);
     *func = buffer.clone();
-
     return func.clone();
 }
 
 /* return the first Entry (module name/desc) */
-pub fn read_res_name_table(map: &Vec<u8>, start: usize, entry_table: &Vec<entry>) -> String
+pub fn read_res_name_table(map: &Vec<u8>, start: usize, entry_table: &Vec<NeEntry>) -> String
 {
     /* reads (non)resident names into our Entry table */
     let mut cursor = start;
@@ -404,7 +403,7 @@ pub fn read_res_name_table(map: &Vec<u8>, start: usize, entry_table: &Vec<entry>
     return first;
 }
 
-pub fn get_entry_table(tart: usize, ne: &mut NeExecutable)
+pub fn get_entry_table(start: usize, ne: &mut NeExecutable)
 {
     let mut length = 0u8;
     let mut index = 0u8;
@@ -416,10 +415,10 @@ pub fn get_entry_table(tart: usize, ne: &mut NeExecutable)
     /* get a count */
     cursor = start;
     cursor += 1;
-    while length = read_byte(map, cursor)
+    while length = read_byte(&ne.file, cursor)
     {
         cursor += 1;
-        index = read_byte(map, cursor);
+        index = read_byte(&ne.file, cursor);
         count += length;
         if index != 0 {
             cursor += (if index == 0xff {
@@ -431,59 +430,76 @@ pub fn get_entry_table(tart: usize, ne: &mut NeExecutable)
 
     count = 0;
     cursor = start;
-    while ((length = read_byte(cursor += 1)))
+    cursor +=1;
+    length = read_byte(&ne.file, cursor);
+    while length > 0
     {
-        index = read_byte(cursor += 1);
-        for (i = 0; i < length;  += 1i)
+        cursor += 1;
+        index = read_byte(&ne.file, cursor);
+        for i in 0 .. length
         {
-            if (index == 0xff) {
-                ne.enttab[count].flags = read_byte(cursor);
-                if ((w = read_word(cursor + 1)) != 0x3fcd)
-                    warn("Entry %d has interrupt bytes %02x %02x (expected 3f cd).\n", count+1, w & 0xff, w >> 16);
-                ne.enttab[count].segment = read_byte(cursor + 3);
-                ne.enttab[count].offset = read_word(cursor + 4);
+            if index == 0xff {
+                ne.enttab[count].flags = read_byte(&ne.file, cursor);
+                w = read_word(&ne.file, cursor + 1);
+                if w != 0x3fcd {
+                    eprint!("Entry {} has interrupt bytes {:02x} {:02x} (expected 3f cd).\n", count + 1, w & 0xff, w >> 16);
+                }
+                ne.enttab[count].segment = read_byte(&ne.file, cursor + 3);
+                ne.enttab[count].offset = read_word(&ne.file, cursor + 4);
                 cursor += 6;
-            } else if (index == 0x00) {
+            } else if index == 0x00 {
                 /* no entries, just here to skip ordinals */
             } else {
-                ne.enttab[count].flags = read_byte(cursor);
+                ne.enttab[count].flags = read_byte(&ne.file, cursor);
                 ne.enttab[count].segment = index;
-                ne.enttab[count].offset = read_word(cursor + 1);
+                ne.enttab[count].offset = read_word(&ne.file, cursor + 1);
                 cursor += 3;
             }
             count += 1;
         }
+        cursor +=1;
+        length = read_byte(&ne.file, cursor);
     }
 
     ne.entcount = count;
 }
 
-static void load_exports(struct import_module *module) {
-    FILE *specfile;
-    char spec_name[18];
-    char line[300], *p;
-    int count;
-    u16 ordinal;
+pub fn load_exports(module: &NeImportModule) {
 
-    sprintf(spec_name, "%.8s.ORD", module.name);
-    specfile = fopen(spec_name, "r");
-    if (!specfile) {
-        sprintf(spec_name, "spec/%.8s.ORD", module.name);
-        specfile = fopen(spec_name, "r");
-        if (!specfile) {
-            fprintf(stderr, "Note: couldn't find specfile for module %s; exported names won't be given.\n", module.name);
-            fprintf(stderr, "      To create a specfile, run `dumpne -o <module.dll>'.\n");
-            module.exports = NULL;
-            module.export_count = 0;
-            return;
-        }
-    }
+    let mut line = String::New();
+    let mut p = String::new();
+    let mut count = 0usize;
+    let mut ordinal = 0u16;
+
+    let spec_name = fmt!("%.8s.ORD", module.name);
+    let mut specfile = std::fs::File::open(spec_name)?;
+    // if (!specfile) {
+    //     sprintf(spec_name, "spec/%.8s.ORD", module.name);
+    //     specfile = fopen(spec_name, "r");
+    //     if (!specfile) {
+    //         eprint!( "Note: couldn't find specfile for module {}; exported names won't be given.\n", module.name);
+    //         eprint!( "      To create a specfile, run `dumpne -o <module.dll>'.\n");
+    //         module.exports = NULL;
+    //         module.export_count = 0;
+    //         return;
+    //     }
+    // }
 
     /* first grab a count */
-    count = 0;
-    while (fgets(line, sizeof(line), specfile)) {
-        if (line[0] == '#' || line[0] == '\n') continue;
-        count += 1;
+    // count = 0;
+    // while (fgets(line, sizeof(line), specfile)) {
+    //     if (line[0] == '#' || line[0] == '\n') continue;
+    //     count += 1;
+    // }
+    let mut file_buf: Vec<u8> = Vec::new();
+    let bytes_read = specfile.read(&mut file_buf)?;
+    let lines = file_buf.split("\n");
+    let mut spec_lines: Vec<u8> =   Vec::new();
+    for line in lines {
+        if line[0] == '#'.into() || line[0] == '\n'.into() {
+            continue;
+        }
+        ordinal, name = line.split('\t');
     }
 
     module.exports = malloc(count * sizeof(struct export));
@@ -494,7 +510,7 @@ static void load_exports(struct import_module *module) {
         if (line[0] == '#' || line[0] == '\n') continue;
         if ((p = strchr(line, '\n'))) *p = 0;   /* kill final newline */
         if (sscanf(line, "%hu", &ordinal) != 1) {
-            fprintf(stderr, "Error reading specfile near line: `%s'\n", line);
+            eprint!( "Error reading specfile near line: `{}'\n", line);
             continue;
         }
         module.exports[count].ordinal = ordinal;
@@ -595,9 +611,9 @@ void dumpne(usize offset_ne) {
     }
 
     printf("Module type: NE (New Executable)\n");
-    printf("Module name: %s\n", ne.name);
+    printf("Module name: {}\n", ne.name);
     if (ne.description)
-        printf("Module description: %s\n", ne.description);
+        printf("Module description: {}\n", ne.description);
 
     if (mode & DUMPHEADER)
         print_header(&ne.header);
@@ -612,7 +628,7 @@ void dumpne(usize offset_ne) {
         putchar('\n');
         printf("Imported modules:\n");
         for (i = 0; i < ne.header.ne_cmod; i += 1)
-            printf("\t%s\n", ne.imptab[i].name);
+            printf("\t{}\n", ne.imptab[i].name);
     }
 
     if (mode & DISASSEMBLE)
