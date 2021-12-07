@@ -499,7 +499,9 @@ pub fn load_exports(module: &NeImportModule) {
         if line[0] == '#'.into() || line[0] == '\n'.into() {
             continue;
         }
-        ordinal, name = line.split('\t');
+        let splits = line.split('\t')?;
+        let x = splits.collect::<Vec<&str>>();
+
     }
 
     module.exports = malloc(count * sizeof(struct export));
