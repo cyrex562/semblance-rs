@@ -64,7 +64,7 @@ static void dump_file(char *file){
 
     magic = read_word(0);
 
-    printf("File: %s\n", file);
+    print!("File: %s\n", file);
     if (magic == 0x5a4d){ /* MZ */
         offset = read_dword(0x3c);
         magic = read_word(offset);
@@ -76,7 +76,7 @@ static void dump_file(char *file){
         else
             dumpmz();
     } else
-        fprintf(stderr, "File format not recognized\n");
+        eprint! "File format not recognized\n");
 
     return;
 }
@@ -177,7 +177,7 @@ int main(int argc, char *argv[]){
             mode |= DUMPHEADER;
             break;
         case 'h': /* help */
-            printf(help_message);
+            print!(help_message);
             return 0;
         case 'i': /* imports */
             mode |= DUMPIMPORT;
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]){
             else if (!strcmp(optarg, "nasm"))
                 asm_syntax = NASM;
             else {
-                fprintf(stderr, "Unrecognized disassembly option `%s'.\n", optarg);
+                eprint! "Unrecognized disassembly option `%s'.\n", optarg);
                 return 1;
             }
             break;
@@ -198,7 +198,7 @@ int main(int argc, char *argv[]){
             mode = SPECFILE;
             break;
         case 'v': /* version */
-            printf("semblance version " VERSION "\n");
+            print!("semblance version " VERSION "\n");
             return 0;
         case 's': /* full contents */
             opts |= FULL_CONTENTS;
@@ -212,12 +212,12 @@ int main(int argc, char *argv[]){
             else if (optarg[0] == '0' || optarg[0] == 'n' || optarg[0] == 'N')
                 pe_rel_addr = 0;
             else {
-                fprintf(stderr, "Unrecognized --pe-rel-addr option `%s'.\n", optarg);
+                eprint! "Unrecognized --pe-rel-addr option `%s'.\n", optarg);
                 return 1;
             }
             break;
         default:
-            fprintf(stderr, "Usage: dumpne [options] <file>\n");
+            eprint! "Usage: dumpne [options] <file>\n");
             return 1;
         }
     }
@@ -226,12 +226,12 @@ int main(int argc, char *argv[]){
         mode = ~0;
 
     if (optind == argc)
-        printf(help_message);
+        print!(help_message);
 
     while (optind < argc){
         dump_file(argv[optind++]);
         if (optind < argc)
-            printf("\n\n");
+            print!("\n\n");
     }
 
     return 0;

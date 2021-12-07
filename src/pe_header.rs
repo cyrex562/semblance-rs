@@ -329,7 +329,7 @@ pub fn get_export_table(pe: &PortableExecutableHeader)
 
 static void get_import_name_table(struct import_module *module, u32 nametab_addr, struct pe *pe)
 {
-    usize offset = addr2offset(nametab_addr, pe);
+    offset: usize = addr2offset(nametab_addr, pe);
     unsigned i, count;
 
     count = 0;
@@ -361,7 +361,7 @@ static void get_import_name_table(struct import_module *module, u32 nametab_addr
 }
 
 static void get_import_module_table(struct pe *pe) {
-    usize offset = addr2offset(pe.dirs[1].address, pe);
+    offset: usize = addr2offset(pe.dirs[1].address, pe);
     static const u32 zeroes[5] = {0};
     int i;
 
@@ -380,7 +380,7 @@ static void get_import_module_table(struct pe *pe) {
 }
 
 static void get_reloc_table(struct pe *pe) {
-    usize offset = addr2offset(pe.dirs[5].address, pe), cursor = offset;
+    offset: usize = addr2offset(pe.dirs[5].address, pe), cursor = offset;
     unsigned i, reloc_idx = 0;
 
     pe.reloc_count = 0;
@@ -408,9 +408,9 @@ static void get_reloc_table(struct pe *pe) {
     }
 }
 
-static void readpe(usize offset_pe, struct pe *pe)
+static void readpe(offset_pe: usize, struct pe *pe)
 {
-    usize offset;
+    offset: usize;
     int i, cdirs;
 
     pe.header = read_data(offset_pe + 4);
@@ -479,7 +479,7 @@ static void freepe(struct pe *pe) {
     free(pe.imports);
 }
 
-void dumppe(usize offset_pe) {
+void dumppe(offset_pe: usize) {
     struct pe pe = {0};
     int i, j;
 
@@ -509,16 +509,16 @@ void dumppe(usize offset_pe) {
     if (pe_rel_addr == -1)
         pe_rel_addr = pe.header.Characteristics & 0x2000;
 
-    printf("Module type: PE (Portable Executable)\n");
-    if (pe.name) printf("Module name: {}\n", pe.name);
+    print!("Module type: PE (Portable Executable)\n");
+    if (pe.name) print!("Module name: {}\n", pe.name);
 
     if (mode & DUMPHEADER)
         print_header(&pe);
 
     if (mode & DUMPEXPORT) {
-        putchar('\n');
+        print!('\n');
         if (pe.exports) {
-            printf("Exports:\n");
+            print!("Exports:\n");
 
             for (i = 0; i < pe.export_count; i += 1) {
                 u32 address = pe.exports[i].address;
@@ -526,37 +526,37 @@ void dumppe(usize offset_pe) {
                     continue;
                 if (!pe_rel_addr)
                     address += pe.imagebase;
-                printf("\t%5d\t%#8x\t{}", pe.exports[i].ordinal, address,
+                print!("\t%5d\t%#8x\t{}", pe.exports[i].ordinal, address,
                     pe.exports[i].name ? pe.exports[i].name : "<no name>");
                 if (pe.exports[i].address >= pe.dirs[0].address
                         && pe.exports[i].address < (pe.dirs[0].address + pe.dirs[0].size))
-                    printf(" . {}", (const char *)read_data(addr2offset(pe.exports[i].address, &pe)));
-                putchar('\n');
+                    print!(" . {}", (const char *)read_data(addr2offset(pe.exports[i].address, &pe)));
+                print!('\n');
             }
         } else
-            printf("No Export table\n");
+            print!("No Export table\n");
     }
 
     if (mode & DUMPIMPORT) {
-        putchar('\n');
+        print!('\n');
         if (pe.imports) {
-            printf("Imported modules:\n");
+            print!("Imported modules:\n");
             for (i = 0; i < pe.import_count; i += 1)
-                printf("\t{}\n", pe.imports[i].module);
+                print!("\t{}\n", pe.imports[i].module);
 
-            printf("\nImported functions:\n");
+            print!("\nImported functions:\n");
             for (i = 0; i < pe.import_count; i += 1) {
-                printf("\t{}:\n", pe.imports[i].module);
+                print!("\t{}:\n", pe.imports[i].module);
                 for (j = 0; j < pe.imports[i].count; j += 1)
                 {
                     if (pe.imports[i].nametab[j].is_ordinal)
-                        printf("\t\t<ordinal %u>\n", pe.imports[i].nametab[j].ordinal);
+                        print!("\t\t<ordinal %u>\n", pe.imports[i].nametab[j].ordinal);
                     else
-                        printf("\t\t{}\n", pe.imports[i].nametab[j].name);
+                        print!("\t\t{}\n", pe.imports[i].nametab[j].name);
                 }
             }
         } else
-            printf("No imported module table\n");
+            print!("No imported module table\n");
     }
 
     if (mode & DISASSEMBLE)

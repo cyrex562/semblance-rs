@@ -29,44 +29,44 @@
 static void print_flags(word flags) {
     char buffer[1024] = "";
 
-    if (flags & 0x0001) strcat(buffer, ", relocations stripped");
-    if (flags & 0x0002) strcat(buffer, ", executable");
-    if (flags & 0x0004) strcat(buffer, ", line numbers stripped");
-    if (flags & 0x0008) strcat(buffer, ", local symbols stripped");
-    if (flags & 0x0010) strcat(buffer, ", aggressively trimmed");
-    if (flags & 0x0020) strcat(buffer, ", large address aware");
-    if (flags & 0x0040) strcat(buffer, ", 16-bit");     /* deprecated and reserved */
-    if (flags & 0x0080) strcat(buffer, ", little-endian");
-    if (flags & 0x0100) strcat(buffer, ", 32-bit");
-    if (flags & 0x0200) strcat(buffer, ", debug info stripped");
-    if (flags & 0x0400) strcat(buffer, ", IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP");
-    if (flags & 0x0800) strcat(buffer, ", IMAGE_FILE_NET_RUN_FROM_SWAP");
-    if (flags & 0x1000) strcat(buffer, ", system file");
-    if (flags & 0x2000) strcat(buffer, ", DLL");
-    if (flags & 0x4000) strcat(buffer, ", uniprocessor");
-    if (flags & 0x8000) strcat(buffer, ", big-endian");
+    if (flags & 0x0001) buffer += ", relocations stripped";
+    if (flags & 0x0002) buffer += ", executable";
+    if (flags & 0x0004) buffer += ", line numbers stripped";
+    if (flags & 0x0008) buffer += ", local symbols stripped";
+    if (flags & 0x0010) buffer += ", aggressively trimmed";
+    if (flags & 0x0020) buffer += ", large address aware";
+    if (flags & 0x0040) buffer += ", 16-bit";     /* deprecated and reserved */
+    if (flags & 0x0080) buffer += ", little-endian";
+    if (flags & 0x0100) buffer += ", 32-bit";
+    if (flags & 0x0200) buffer += ", debug info stripped";
+    if (flags & 0x0400) buffer += ", IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP";
+    if (flags & 0x0800) buffer += ", IMAGE_FILE_NET_RUN_FROM_SWAP";
+    if (flags & 0x1000) buffer += ", system file";
+    if (flags & 0x2000) buffer += ", DLL";
+    if (flags & 0x4000) buffer += ", uniprocessor";
+    if (flags & 0x8000) buffer += ", big-endian";
 
-    printf("Flags: 0x%04x (%s)\n", flags, buffer+2);
+    print!("Flags: 0x{:04x} (%s)\n", flags, buffer+2);
 }
 
 static void print_dll_flags(word flags) {
     char buffer[1024] = "";
 
-    if (flags & 0x0001) strcat(buffer, ", per-process initialization");
-    if (flags & 0x0002) strcat(buffer, ", per-process termination");
-    if (flags & 0x0004) strcat(buffer, ", per-thread initialization");
-    if (flags & 0x0008) strcat(buffer, ", per-thread termination");
-    if (flags & 0x0040) strcat(buffer, ", dynamic base");
-    if (flags & 0x0080) strcat(buffer, ", force integrity");
-    if (flags & 0x0100) strcat(buffer, ", DEP compatible");
-    if (flags & 0x0200) strcat(buffer, ", no isolation");
-    if (flags & 0x0400) strcat(buffer, ", no SEH");
-    if (flags & 0x0800) strcat(buffer, ", no bind");
-    if (flags & 0x2000) strcat(buffer, ", WDM driver");
-    if (flags & 0x8000) strcat(buffer, ", terminal server aware");
-    if (flags & 0x5030) sprintf(buffer+strlen(buffer), ", (unknown flags 0x%04x)", flags & 0x5030);
+    if (flags & 0x0001) buffer += ", per-process initialization";
+    if (flags & 0x0002) buffer += ", per-process termination";
+    if (flags & 0x0004) buffer += ", per-thread initialization";
+    if (flags & 0x0008) buffer += ", per-thread termination";
+    if (flags & 0x0040) buffer += ", dynamic base";
+    if (flags & 0x0080) buffer += ", force integrity";
+    if (flags & 0x0100) buffer += ", DEP compatible";
+    if (flags & 0x0200) buffer += ", no isolation";
+    if (flags & 0x0400) buffer += ", no SEH";
+    if (flags & 0x0800) buffer += ", no bind";
+    if (flags & 0x2000) buffer += ", WDM driver";
+    if (flags & 0x8000) buffer += ", terminal server aware";
+    if (flags & 0x5030) sprintf(buffer+strlen(buffer), ", (unknown flags 0x{:04x})", flags & 0x5030);
 
-    printf("DLL flags: 0x%04x (%s)\n", flags, buffer+2);
+    print!("DLL flags: 0x{:04x} (%s)\n", flags, buffer+2);
 }
 
 static const char *const subsystems[] = {
@@ -92,38 +92,38 @@ static const char *const subsystems[] = {
 
 static void print_opt32(const struct optional_header *opt)
 {
-    printf("File version: %d.%d\n", opt->MajorImageVersion, opt->MinorImageVersion); /* 44 */
+    print!("File version: %d.%d\n", opt->MajorImageVersion, opt->MinorImageVersion); /* 44 */
 
-    printf("Linker version: %d.%d\n", opt->MajorLinkerVersion, opt->MinorLinkerVersion); /* 1a */
+    print!("Linker version: %d.%d\n", opt->MajorLinkerVersion, opt->MinorLinkerVersion); /* 1a */
 
     if (opt->AddressOfEntryPoint) {
         dword address = opt->AddressOfEntryPoint;
         if (!pe_rel_addr)
             address += opt->ImageBase;
-        printf("Program entry point: 0x%x\n", address); /* 28 */
+        print!("Program entry point: 0x%x\n", address); /* 28 */
     }
 
-    printf("Base of code section: 0x%x\n", opt->BaseOfCode); /* 2c */
-    printf("Base of data section: 0x%x\n", opt->BaseOfData); /* 30 */
+    print!("Base of code section: 0x%x\n", opt->BaseOfCode); /* 2c */
+    print!("Base of data section: 0x%x\n", opt->BaseOfData); /* 30 */
 
-    printf("Preferred base address: 0x%x\n", opt->ImageBase); /* 34 */
-    printf("Required OS version: %d.%d\n", opt->MajorOperatingSystemVersion, opt->MinorOperatingSystemVersion); /* 40 */
+    print!("Preferred base address: 0x%x\n", opt->ImageBase); /* 34 */
+    print!("Required OS version: %d.%d\n", opt->MajorOperatingSystemVersion, opt->MinorOperatingSystemVersion); /* 40 */
 
     if (opt->Win32VersionValue != 0)
         warn("Win32VersionValue is %d (expected 0)\n", opt->Win32VersionValue); /* 4c */
 
     if (opt->Subsystem <= 16) /* 5c */
-        printf("Subsystem: %s\n", subsystems[opt->Subsystem]);
+        print!("Subsystem: %s\n", subsystems[opt->Subsystem]);
     else
-        printf("Subsystem: (unknown value %d)\n", opt->Subsystem);
-    printf("Subsystem version: %d.%d\n", opt->MajorSubsystemVersion, opt->MinorSubsystemVersion); /* 48 */
+        print!("Subsystem: (unknown value %d)\n", opt->Subsystem);
+    print!("Subsystem version: %d.%d\n", opt->MajorSubsystemVersion, opt->MinorSubsystemVersion); /* 48 */
 
     print_dll_flags(opt->DllCharacteristics); /* 5e */
 
-    printf("Stack size (reserve): %d bytes\n", opt->SizeOfStackReserve); /* 60 */
-    printf("Stack size (commit): %d bytes\n", opt->SizeOfStackCommit); /* 64 */
-    printf("Heap size (reserve): %d bytes\n", opt->SizeOfHeapReserve); /* 68 */
-    printf("Heap size (commit): %d bytes\n", opt->SizeOfHeapCommit); /* 6c */
+    print!("Stack size (reserve): %d bytes\n", opt->SizeOfStackReserve); /* 60 */
+    print!("Stack size (commit): %d bytes\n", opt->SizeOfStackCommit); /* 64 */
+    print!("Heap size (reserve): %d bytes\n", opt->SizeOfHeapReserve); /* 68 */
+    print!("Heap size (commit): %d bytes\n", opt->SizeOfHeapCommit); /* 6c */
 
     if (opt->LoaderFlags != 0)
         warn("LoaderFlags is 0x%x (expected 0)\n", opt->LoaderFlags); /* 70 */
@@ -131,47 +131,47 @@ static void print_opt32(const struct optional_header *opt)
 
 static void print_opt64(const struct optional_header_pep *opt)
 {
-    printf("File version: %d.%d\n", opt->MajorImageVersion, opt->MinorImageVersion); /* 44 */
+    print!("File version: %d.%d\n", opt->MajorImageVersion, opt->MinorImageVersion); /* 44 */
 
-    printf("Linker version: %d.%d\n", opt->MajorLinkerVersion, opt->MinorLinkerVersion); /* 1a */
+    print!("Linker version: %d.%d\n", opt->MajorLinkerVersion, opt->MinorLinkerVersion); /* 1a */
 
     if (opt->AddressOfEntryPoint) {
         dword address = opt->AddressOfEntryPoint;
         if (!pe_rel_addr)
             address += opt->ImageBase;
-        printf("Program entry point: 0x%x\n", address); /* 28 */
+        print!("Program entry point: 0x%x\n", address); /* 28 */
     }
 
-    printf("Base of code section: 0x%x\n", opt->BaseOfCode); /* 2c */
+    print!("Base of code section: 0x%x\n", opt->BaseOfCode); /* 2c */
 
-    printf("Preferred base address: 0x%lx\n", opt->ImageBase); /* 30 */
-    printf("Required OS version: %d.%d\n", opt->MajorOperatingSystemVersion, opt->MinorOperatingSystemVersion); /* 40 */
+    print!("Preferred base address: 0x%lx\n", opt->ImageBase); /* 30 */
+    print!("Required OS version: %d.%d\n", opt->MajorOperatingSystemVersion, opt->MinorOperatingSystemVersion); /* 40 */
 
     if (opt->Win32VersionValue != 0)
         warn("Win32VersionValue is %d (expected 0)\n", opt->Win32VersionValue); /* 4c */
 
     if (opt->Subsystem <= 16) /* 5c */
-        printf("Subsystem: %s\n", subsystems[opt->Subsystem]);
+        print!("Subsystem: %s\n", subsystems[opt->Subsystem]);
     else
-        printf("Subsystem: (unknown value %d)\n", opt->Subsystem);
-    printf("Subsystem version: %d.%d\n", opt->MajorSubsystemVersion, opt->MinorSubsystemVersion); /* 48 */
+        print!("Subsystem: (unknown value %d)\n", opt->Subsystem);
+    print!("Subsystem version: %d.%d\n", opt->MajorSubsystemVersion, opt->MinorSubsystemVersion); /* 48 */
 
     print_dll_flags(opt->DllCharacteristics); /* 5e */
 
-    printf("Stack size (reserve): %ld bytes\n", opt->SizeOfStackReserve); /* 60 */
-    printf("Stack size (commit): %ld bytes\n", opt->SizeOfStackCommit); /* 68 */
-    printf("Heap size (reserve): %ld bytes\n", opt->SizeOfHeapReserve); /* 70 */
-    printf("Heap size (commit): %ld bytes\n", opt->SizeOfHeapCommit); /* 78 */
+    print!("Stack size (reserve): %ld bytes\n", opt->SizeOfStackReserve); /* 60 */
+    print!("Stack size (commit): %ld bytes\n", opt->SizeOfStackCommit); /* 68 */
+    print!("Heap size (reserve): %ld bytes\n", opt->SizeOfHeapReserve); /* 70 */
+    print!("Heap size (commit): %ld bytes\n", opt->SizeOfHeapCommit); /* 78 */
 
     if (opt->LoaderFlags != 0)
         warn("LoaderFlags is 0x%x (expected 0)\n", opt->LoaderFlags); /* 80 */
 }
 
 static void print_header(struct pe *pe) {
-    putchar('\n');
+    print!('\n');
 
     if (!pe->header->SizeOfOptionalHeader) {
-        printf("No optional header\n");
+        print!("No optional header\n");
         return;
     } else if (pe->header->SizeOfOptionalHeader < sizeof(struct optional_header))
         warn("Size of optional header is %u (expected at least %lu).\n",
@@ -180,10 +180,10 @@ static void print_header(struct pe *pe) {
     print_flags(pe->header->Characteristics); /* 16 */
 
     if (pe->magic == 0x10b) {
-        printf("Image type: 32-bit\n");
+        print!("Image type: 32-bit\n");
         print_opt32(pe->opt32);
     } else if (pe->magic == 0x20b) {
-        printf("Image type: 64-bit\n");
+        print!("Image type: 64-bit\n");
         print_opt64(pe->opt64);
     }
 }
@@ -445,16 +445,16 @@ void dumppe(off_t offset_pe) {
     if (pe_rel_addr == -1)
         pe_rel_addr = pe.header->Characteristics & 0x2000;
 
-    printf("Module type: PE (Portable Executable)\n");
-    if (pe.name) printf("Module name: %s\n", pe.name);
+    print!("Module type: PE (Portable Executable)\n");
+    if (pe.name) print!("Module name: %s\n", pe.name);
 
     if (mode & DUMPHEADER)
         print_header(&pe);
 
     if (mode & DUMPEXPORT) {
-        putchar('\n');
+        print!('\n');
         if (pe.exports) {
-            printf("Exports:\n");
+            print!("Exports:\n");
 
             for (i = 0; i < pe.export_count; i++) {
                 dword address = pe.exports[i].address;
@@ -462,37 +462,37 @@ void dumppe(off_t offset_pe) {
                     continue;
                 if (!pe_rel_addr)
                     address += pe.imagebase;
-                printf("\t%5d\t%#8x\t%s", pe.exports[i].ordinal, address,
+                print!("\t%5d\t%#8x\t%s", pe.exports[i].ordinal, address,
                     pe.exports[i].name ? pe.exports[i].name : "<no name>");
                 if (pe.exports[i].address >= pe.dirs[0].address
                         && pe.exports[i].address < (pe.dirs[0].address + pe.dirs[0].size))
-                    printf(" -> %s", (const char *)read_data(addr2offset(pe.exports[i].address, &pe)));
-                putchar('\n');
+                    print!(" -> %s", (const char *)read_data(addr2offset(pe.exports[i].address, &pe)));
+                print!('\n');
             }
         } else
-            printf("No export table\n");
+            print!("No export table\n");
     }
 
     if (mode & DUMPIMPORT) {
-        putchar('\n');
+        print!('\n');
         if (pe.imports) {
-            printf("Imported modules:\n");
+            print!("Imported modules:\n");
             for (i = 0; i < pe.import_count; i++)
-                printf("\t%s\n", pe.imports[i].module);
+                print!("\t%s\n", pe.imports[i].module);
 
-            printf("\nImported functions:\n");
+            print!("\nImported functions:\n");
             for (i = 0; i < pe.import_count; i++) {
-                printf("\t%s:\n", pe.imports[i].module);
+                print!("\t%s:\n", pe.imports[i].module);
                 for (j = 0; j < pe.imports[i].count; j++)
                 {
                     if (pe.imports[i].nametab[j].is_ordinal)
-                        printf("\t\t<ordinal %u>\n", pe.imports[i].nametab[j].ordinal);
+                        print!("\t\t<ordinal %u>\n", pe.imports[i].nametab[j].ordinal);
                     else
-                        printf("\t\t%s\n", pe.imports[i].nametab[j].name);
+                        print!("\t\t%s\n", pe.imports[i].nametab[j].name);
                 }
             }
         } else
-            printf("No imported module table\n");
+            print!("No imported module table\n");
     }
 
     if (mode & DISASSEMBLE)

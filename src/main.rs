@@ -23,7 +23,7 @@ mod x86_instr_prefix;
 mod x86_mod_rm;
 mod mz;
 mod ne;
-mod ne_header;
+mod ne_resource;
 
 // int main(int argc, char *argv[]){
 //     int opt;

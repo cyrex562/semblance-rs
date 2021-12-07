@@ -1,162 +1,137 @@
-/*
- * Function(s) for dumping resources from NE files
- *
- * Copyright 2017-2020 Zebediah Figura
- *
- * This file is part of Semblance.
- *
- * Semblance is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Semblance is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Semblance; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
- */
+use crate::semblance::{read_byte, read_data, read_word};
 
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "semblance.h"
-#include "ne"
-
-#pragma pack(1)
-
-struct header_bitmap_info {
-    u32 biSize;           /* 00 */
-    u32 biWidth;          /* 04 */
-    u32 biHeight;         /* 08 */
-    u16  biPlanes;         /* 0c */
-    u16  biBitCount;       /* 0e */
-    u32 biCompression;    /* 10 */
-    u32 biSizeImage;      /* 14 */
-    u32 biXPelsPerMeter;  /* 18 */
-    u32 biYPelsPerMeter;  /* 1c */
-    u32 biClrUsed;        /* 20 */
-    u32 biClrImportant;   /* 24 */
-};
-
-STATIC_ASSERT(sizeof(struct header_bitmap_info) == 0x28);
-
-static char *dup_string_resource(usize offset)
+pub fn dup_string_resource(map: &Vec<u8>, offset: usize) -> String
 {
-    u8 length = read_byte(offset);
-    char *ret = malloc(length + 1);
-    memcpy(ret, read_data(offset + 1), length);
-    ret[length] = 0;
+    let length = read_byte(map, offset);
+    let mut ret = String::new();
+    ret = read_data(map, offset+1, length as usize).into();
     return ret;
 }
 
 /* length-indexed; returns  */
-static void print_escaped_string(usize offset, long length){
-    putchar('"');
-    while (length -= 1){
-        char c = read_byte(offset += 1);
-        if (c == '\t')
-            printf("\\t");
-        else if (c == '\n')
-            printf("\\n");
-        else if (c == '\r')
-            printf("\\r");
-        else if (c == '"')
-            printf("\\\"");
-        else if (c == '\\')
-            printf("\\\\");
-        else if (c >= ' ' && c <= '~')
-            putchar(c);
-        else
-            printf("\\x%02hhx", c);
+pub fn print_escaped_string(map: &Vec<u8>, mut offset: usize, mut length: i32){
+    print!('"');
+    while length -= 1 {
+        offset += 1;
+        let c = read_byte(map, offset);
+        if c == '\t' as u8 {
+            print!("\\t");
+        }
+        else if c == '\n' as u8 {
+            print!("\\n");
+        }
+        else if c == '\r' as u8 {
+            print!("\\r");
+        }
+        else if c == '"' as u8 {
+            print!("\\\"");
+        }
+        else if c == '\\' as u8 {
+            print!("\\\\");
+        }
+        else if c >= ' ' as u8 && c <= '~' as u8 {
+            print!(c);
+        }
+        else {
+            print!("\\x{:02x}", c);
+        }
     }
-    putchar('"');
+    print!('"');
 }
 
 /* null-terminated; returns the end of the string */
-static usize print_escaped_string0(usize offset)
+pub fn print_escaped_string0(map: &Vec<u8>, mut offset: usize) -> usize
 {
-    char c;
-    putchar('"');
-    while ((c = read_byte(offset += 1))){
-        if (c == '\t')
-            printf("\\t");
-        else if (c == '\n')
-            printf("\\n");
-        else if (c == '\r')
-            printf("\\r");
-        else if (c == '"')
-            printf("\\\"");
-        else if (c == '\\')
-            printf("\\\\");
-        else if (c >= ' ' && c <= '~')
-            putchar(c);
-        else
-            printf("\\x%02hhx", c);
+    print!('"');
+    offset += 1;
+    let mut c = read_byte(map, offset);
+    while c != 0 {
+        if c == '\t' as u8 {
+            print!("\\t");
+        }
+        else if c == '\n' as u8 {
+            print!("\\n");
+        }
+        else if c == '\r' as u8 {
+            print!("\\r");
+        }
+        else if c == '"' as u8 {
+            print!("\\\"");
+        }
+        else if c == '\\' as u8 {
+            print!("\\\\");
+        }
+        else if c >= ' ' as u8 && c <= '~' as u8 {
+            print!(c);
+        }
+        else {
+            print!("\\x{:02x}", c);
+        }
+        offset += 1;
+        c = read_byte(map, offset);
     }
-    putchar('"');
+    print!('"');
     return offset;
 }
 
-static void print_timestamp(u32 high, u32 low){
-    /* TODO */
+pub fn print_timestamp(high: u32, low: u32){
+    unimplemented!()
 };
 
-const char *const rsrc_types[] = {
-    0,
-    "Cursor",            /* 1 */
-    "Bitmap",            /* 2 */
-    "Icon",              /* 3 */
-    "Menu",              /* 4 */
-    "Dialog box",        /* 5 */
-    "String",            /* 6 */
-    "Font directory",    /* 7 */
-    "Font component",    /* 8 */
-    "Accelerator table", /* 9 */
-    "Resource data",     /* a */
-    "Message table",     /* b */    /* fixme: error table? */
-    "Cursor directory",  /* c */
-    0,
-    "Icon directory",    /* e */
-    "Name table",        /* f */
-    "Version",           /* 10 */
-    0,                              /* fixme: RT_DLGINCLUDE? */
-    0
-};
-const size_t rsrc_types_count = sizeof(rsrc_types)/sizeof(rsrc_types[0]);
+pub const RSRC_TYPES: [String;19] = [
+    "".to_string(),
+    "Cursor".to_string(),            /* 1 */
+    "Bitmap".to_string(),            /* 2 */
+    "Icon".to_string(),              /* 3 */
+    "Menu".to_string(),              /* 4 */
+    "Dialog box".to_string(),        /* 5 */
+    "String".to_string(),            /* 6 */
+    "Font directory".to_string(),    /* 7 */
+    "Font component".to_string(),    /* 8 */
+    "Accelerator table".to_string(), /* 9 */
+    "Resource data".to_string(),     /* a */
+    "Message table".to_string(),     /* b */    /* fixme: error table? */
+    "Cursor directory".to_string(),  /* c */
+    "".to_string(),
+    "Icon directory".to_string(),    /* e */
+    "Name table".to_string(),        /* f */
+    "Version".to_string(),           /* 10 */
+    "".to_string(),                              /* fixme: RT_DLGINCLUDE? */
+    "".to_string()
+];
+// const size_t rsrc_types_count = sizeof(RSRC_TYPES)/sizeof(RSRC_TYPES[0]);
 
-static const char *const rsrc_bmp_compression[] = {
-    "none",                     /* 0 */
-    "RLE (8 bpp)",              /* 1 */
-    "RLE (4 bpp)",              /* 2 */
-    "RGB bit field masks",      /* 3 */
-    "JPEG", /* shouldn't occur?    4 */
-    "PNG", /* shouldn't occur?     5 */
-    "RGBA bit field masks",     /* 6 */
-    0,
-    0,
-    0,
-    0,
-    "none (CMYK)",              /* 11 */
-    "RLE (8 bpp, CMYK)",        /* 12 */
-    "RLE (4 bpp, CMYK)",        /* 13 */
-    0
-};
+pub const RSRC_BMP_COMPRESSION: [String;15] = [
+    "none".to_string(),                     /* 0 */
+    "RLE (8 bpp)".to_string(),              /* 1 */
+    "RLE (4 bpp)".to_string(),              /* 2 */
+    "RGB bit field masks".to_string(),      /* 3 */
+    "JPEG".to_string(), /* shouldn't occur?    4 */
+    "PNG".to_string(), /* shouldn't occur?     5 */
+    "RGBA bit field masks".to_string(),     /* 6 */
+    "".to_string(),
+    "".to_string(),
+    "".to_string(),
+    "".to_string(),
+    "none (CMYK)".to_string(),              /* 11 */
+    "RLE (8 bpp, CMYK)".to_string(),        /* 12 */
+    "RLE (4 bpp, CMYK)".to_string(),        /* 13 */
+    "".to_string()
+];
 
-static void print_rsrc_flags(u16 flags){
-    if (flags & 0x0010)
-        printf(", moveable");
-    if (flags & 0x0020)
-        printf(", shareable");
-    if (flags & 0x0040)
-        printf(", preloaded");
-    if (flags & 0xff8f)
-        printf(", (unknown flags 0x%04x)", flags & 0xff8f);
+pub fn print_rsrc_flags(flags: u16){
+    if flags & 0x0010 {
+        print!(", moveable");
+    }
+    if flags & 0x0020 {
+        print!(", shareable");
+    }
+    if flags & 0x0040 {
+        print!(", preloaded");
+    }
+    if flags & 0xff8f {
+        print!(", (unknown flags 0x{:04x})", flags & 0xff8f);
+    }
 }
 
 /* There are a lot of styles here and most of them would require longer
@@ -164,359 +139,371 @@ static void print_rsrc_flags(u16 flags){
  * Not all of these are dialog box-related, but I'm not going to try to
  * sort through them. */
 
-static const char *const rsrc_dialog_style[] = {
-    "DS_ABSALIGN",      /* 00000001 */
-    "DS_SYSMODAL",      /* 00000002 */
-    "DS_3DLOOK",        /* 00000004 */
-    "DS_FIXEDSYS",      /* 00000008 */
-    "DS_NOFAILCREATE",  /* 00000010 */
-    "DS_LOCALEDIT",     /* 00000020 */
-    "DS_SETFONT",       /* 00000040 */
-    "DS_MODALFRAME",    /* 00000080 */
-    "DS_NOIDLEMSG",     /* 00000100 */
-    "DS_SETFOREGROUND", /* 00000200 */
-    "DS_CONTROL",       /* 00000400 */
-    "DS_CENTER",        /* 00000800 */
-    "DS_CENTERMOUSE",   /* 00001000 */
-    "DS_CONTEXTHELP",   /* 00002000 */
-    "(unrecognized flag 0x00004000)",
-    "DS_USEPIXELS",     /* 00008000 */
-    "WS_TABSTOP",       /* 00010000 */
-    "WS_GROUP",         /* 00020000 */
-    "WS_THICKFRAME",    /* 00040000 */
-    "WS_SYSMENU",       /* 00080000 */
-    "WS_HSCROLL",       /* 00100000 */
-    "WS_VSCROLL",       /* 00200000 */
-    "WS_DLGFRAME",      /* 00400000 */
-    "WS_BORDER",        /* 00800000 */
-    "WS_MAXIMIZE",      /* 01000000 */
-    "WS_CLIPCHILDREN",  /* 02000000 */
-    "WS_CLIPSIBLINGS",  /* 04000000 */
-    "WS_DISABLED",      /* 08000000 */
-    "WS_VISIBLE",       /* 10000000 */
-    "WS_MINIMIZE",      /* 20000000 */
-    "WS_CHILD",         /* 40000000 */
-    "WS_POPUP",         /* 80000000 */
-    0
-};
+pub const rsrc_dialog_style: [String;33] = [
+    "DS_ABSALIGN".to_string(),      /* 00000001 */
+    "DS_SYSMODAL".to_string(),      /* 00000002 */
+    "DS_3DLOOK".to_string(),        /* 00000004 */
+    "DS_FIXEDSYS".to_string(),      /* 00000008 */
+    "DS_NOFAILCREATE".to_string(),  /* 00000010 */
+    "DS_LOCALEDIT".to_string(),     /* 00000020 */
+    "DS_SETFONT".to_string(),       /* 00000040 */
+    "DS_MODALFRAME".to_string(),    /* 00000080 */
+    "DS_NOIDLEMSG".to_string(),     /* 00000100 */
+    "DS_SETFOREGROUND".to_string(), /* 00000200 */
+    "DS_CONTROL".to_string(),       /* 00000400 */
+    "DS_CENTER".to_string(),        /* 00000800 */
+    "DS_CENTERMOUSE".to_string(),   /* 00001000 */
+    "DS_CONTEXTHELP".to_string(),   /* 00002000 */
+    "(unrecognized flag 0x00004000)".to_string(),
+    "DS_USEPIXELS".to_string(),     /* 00008000 */
+    "WS_TABSTOP".to_string(),       /* 00010000 */
+    "WS_GROUP".to_string(),         /* 00020000 */
+    "WS_THICKFRAME".to_string(),    /* 00040000 */
+    "WS_SYSMENU".to_string(),       /* 00080000 */
+    "WS_HSCROLL".to_string(),       /* 00100000 */
+    "WS_VSCROLL".to_string(),       /* 00200000 */
+    "WS_DLGFRAME".to_string(),      /* 00400000 */
+    "WS_BORDER".to_string(),        /* 00800000 */
+    "WS_MAXIMIZE".to_string(),      /* 01000000 */
+    "WS_CLIPCHILDREN".to_string(),  /* 02000000 */
+    "WS_CLIPSIBLINGS".to_string(),  /* 04000000 */
+    "WS_DISABLED".to_string(),      /* 08000000 */
+    "WS_VISIBLE".to_string(),       /* 10000000 */
+    "WS_MINIMIZE".to_string(),      /* 20000000 */
+    "WS_CHILD".to_string(),         /* 40000000 */
+    "WS_POPUP".to_string(),         /* 80000000 */
+    "".to_string(),
+];
 
-static void print_rsrc_dialog_style(u32 flags){
-    int i;
-    char buffer[1024];
-    buffer[0] = 0;
-
-    for (i=0;i<32;i += 1){
-        if (flags & (1<<i)){
-            strcat(buffer, ", ");
-            strcat(buffer, rsrc_dialog_style[i]);
+pub fn print_rsrc_dialog_style(flags: u32){
+    let mut buffer = String::new();
+    
+    for i in 0 .. 32 {
+        if flags & (1<<i) {
+            buffer += ", ";
+            buffer += &*rsrc_dialog_style[i];
         }
     }
-    printf("    Style: {}\n", buffer+2);
+    print!("    Style: {}\n", buffer[2..]);
 }
 
-static const char *const rsrc_button_type[] = {
-    "BS_PUSHBUTTON",        /* 0 */
-    "BS_DEFPUSHBUTTON",     /* 1 */
-    "BS_CHECKBOX",          /* 2 */
-    "BS_AUTOCHECKBOX",      /* 3 */
-    "BS_RADIOBUTTON",       /* 4 */
-    "BS_3STATE",            /* 5 */
-    "BS_AUTO3STATE",        /* 6 */
-    "BS_GROUPBOX",          /* 7 */
-    "BS_USERBUTTON",        /* 8 */
-    "BS_AUTORADIOBUTTON",   /* 9 */
-    "BS_PUSHBOX",           /* 10 */
-    "BS_OWNERDRAW",         /* 11 */
-    "(unknown type 12)",
-    "(unknown type 13)",
-    "(unknown type 14)",
-    "(unknown type 15)",
+pub const RSRC_BUTTON_TYPE: [String;17] = [
+    "BS_PUSHBUTTON".to_string(),        /* 0 */
+    "BS_DEFPUSHBUTTON".to_string(),     /* 1 */
+    "BS_CHECKBOX".to_string(),          /* 2 */
+    "BS_AUTOCHECKBOX".to_string(),      /* 3 */
+    "BS_RADIOBUTTON".to_string(),       /* 4 */
+    "BS_3STATE".to_string(),            /* 5 */
+    "BS_AUTO3STATE".to_string(),        /* 6 */
+    "BS_GROUPBOX".to_string(),          /* 7 */
+    "BS_USERBUTTON".to_string(),        /* 8 */
+    "BS_AUTORADIOBUTTON".to_string(),   /* 9 */
+    "BS_PUSHBOX".to_string(),           /* 10 */
+    "BS_OWNERDRAW".to_string(),         /* 11 */
+    "(unknown type 12)".to_string(),
+    "(unknown type 13)".to_string(),
+    "(unknown type 14)".to_string(),
+    "(unknown type 15)".to_string(),
+    "".to_string(),
+];
+
+pub const RSRC_EDIT_STYLE: [String;17] = [
+    "".to_string(), "".to_string(),       /* type */
+    "ES_MULTILINE".to_string(),   /* 0004 */
+    "ES_UPPERCASE".to_string(),   /* 0008 */
+    "ES_LOWERCASE".to_string(),   /* 0010 */
+    "ES_PASSWORD".to_string(),    /* 0020 */
+    "ES_AUTOVSCROLL".to_string(), /* 0040 */
+    "ES_AUTOHSCROLL".to_string(), /* 0080 */
+    "ES_NOHIDESEL".to_string(),   /* 0100 */
+    "ES_COMBO".to_string(),       /* 0200 */
+    "ES_OEMCONVERT".to_string(),  /* 0400 */
+    "ES_READONLY".to_string(),    /* 0800 */
+    "ES_WANTRETURN".to_string(),  /* 1000 */
+    "ES_NUMBER".to_string(),      /* 2000 */
+    "(unknown flag 0x4000)".to_string(),
+    "(unknown flag 0x8000)".to_string(),
+    ""..to_string()
+];
+
+pub const rsrc_static_type: [String;20] = [
+    "SS_LEFT".to_string(),          /* 0 */
+    "SS_CENTER".to_string(),        /* 1 */
+    "SS_RIGHT".to_string(),         /* 2 */
+    "SS_ICON".to_string(),          /* 3 */
+    "SS_BLACKRECT".to_string(),     /* 4 */
+    "SS_GRAYRECT".to_string(),      /* 5 */
+    "SS_WHITERECT".to_string(),     /* 6 */
+    "SS_BLACKFRAME".to_string(),    /* 7 */
+    "SS_GRAYFRAME".to_string(),     /* 8 */
+    "SS_WHITEFRAME".to_string(),    /* 9 */
+    "SS_USERITEM".to_string(),      /* 10 */
+    "SS_SIMPLE".to_string(),        /* 11 */
+    "SS_LEFTNOWORDWRAP".to_string(),/* 12 */
+    "SS_OWNERDRAW".to_string(),     /* 13 */
+    "SS_BITMAP".to_string(),        /* 14 */
+    "SS_ENHMETAFILE".to_string(),   /* 15 */
+    "SS_ETCHEDHORZ".to_string(),    /* 16 */
+    "SS_ETCHEDVERT".to_string(),    /* 17 */
+    "SS_ETCHEDFRAME".to_string(),   /* 18 */
+    "".to_string(),
+];
+
+pub const rsrc_static_style: [String;15] = [
+    "".to_string(), "".to_string(), "".to_string(), "".to_string(), "".to_string(), /* type */
+    "(unknown flag 0x0020)".to_string(),
+    "SS_REALSIZECONTROL".to_string(), /* 0040 */
+    "SS_NOPREFIX".to_string(),        /* 0080 */
+    "SS_NOTIFY".to_string(),          /* 0100 */
+    "SS_CENTERIMAGE".to_string(),     /* 0200 */
+    "SS_RIGHTJUST".to_string(),       /* 0400 */
+    "SS_REALSIZEIMAGE".to_string(),   /* 0800 */
+    "SS_SUNKEN".to_string(),          /* 1000 */
+    "SS_EDITCONTROL".to_string(),     /* 2000 */
     0
-};
+];
 
-static const char *const rsrc_edit_style[] = {
-    0, 0,       /* type */
-    "ES_MULTILINE",   /* 0004 */
-    "ES_UPPERCASE",   /* 0008 */
-    "ES_LOWERCASE",   /* 0010 */
-    "ES_PASSWORD",    /* 0020 */
-    "ES_AUTOVSCROLL", /* 0040 */
-    "ES_AUTOHSCROLL", /* 0080 */
-    "ES_NOHIDESEL",   /* 0100 */
-    "ES_COMBO",       /* 0200 */
-    "ES_OEMCONVERT",  /* 0400 */
-    "ES_READONLY",    /* 0800 */
-    "ES_WANTRETURN",  /* 1000 */
-    "ES_NUMBER",      /* 2000 */
-    "(unknown flag 0x4000)",
-    "(unknown flag 0x8000)",
-    0
-};
+pub const rsrc_listbox_style: [String;17] = [
+    "LBS_NOTIFY".to_string(),            /* 0001 */
+    "LBS_SORT".to_string(),              /* 0002 */
+    "LBS_NOREDRAW".to_string(),          /* 0004 */
+    "LBS_MULTIPLESEL".to_string(),       /* 0008 */
+    "LBS_OWNERDRAWFIXED".to_string(),    /* 0010 */
+    "LBS_OWNERDRAWVARIABLE".to_string(), /* 0020 */
+    "LBS_HASSTRINGS".to_string(),        /* 0040 */
+    "LBS_USETABSTOPS".to_string(),       /* 0080 */
+    "LBS_NOINTEGRALHEIGHT".to_string(),  /* 0100 */
+    "LBS_MULTICOLUMN".to_string(),       /* 0200 */
+    "LBS_WANTKEYBOARDINPUT".to_string(), /* 0400 */
+    "LBS_EXTENDEDSEL".to_string(),       /* 0800 */
+    "LBS_DISABLENOSCROLL".to_string(),   /* 1000 */
+    "LBS_NODATA".to_string(),            /* 2000 */
+    "LBS_NOSEL".to_string(),             /* 4000 */
+    "LBS_COMBOBOX".to_string(),          /* 8000 */
+    "".to_string()
+];
 
-static const char *const rsrc_static_type[] = {
-    "SS_LEFT",          /* 0 */
-    "SS_CENTER",        /* 1 */
-    "SS_RIGHT",         /* 2 */
-    "SS_ICON",          /* 3 */
-    "SS_BLACKRECT",     /* 4 */
-    "SS_GRAYRECT",      /* 5 */
-    "SS_WHITERECT",     /* 6 */
-    "SS_BLACKFRAME",    /* 7 */
-    "SS_GRAYFRAME",     /* 8 */
-    "SS_WHITEFRAME",    /* 9 */
-    "SS_USERITEM",      /* 10 */
-    "SS_SIMPLE",        /* 11 */
-    "SS_LEFTNOWORDWRAP",/* 12 */
-    "SS_OWNERDRAW",     /* 13 */
-    "SS_BITMAP",        /* 14 */
-    "SS_ENHMETAFILE",   /* 15 */
-    "SS_ETCHEDHORZ",    /* 16 */
-    "SS_ETCHEDVERT",    /* 17 */
-    "SS_ETCHEDFRAME",   /* 18 */
-    0
-};
+pub const rsrc_combobox_style: [String;16] = [
+    "".to_string(), "".to_string(), /* type */
+    "".to_string(), "".to_string(), /* unknown */
+    "CBS_OWNERDRAWFIXED".to_string(),    /* 0010 */
+    "CBS_OWNERDRAWVARIABLE".to_string(), /* 0020 */
+    "CBS_AUTOHSCROLL".to_string(),       /* 0040 */
+    "CBS_OEMCONVERT".to_string(),        /* 0080 */
+    "CBS_SORT".to_string(),              /* 0100 */
+    "CBS_HASSTRINGS".to_string(),        /* 0200 */
+    "CBS_NOINTEGRALHEIGHT".to_string(),  /* 0400 */
+    "CBS_DISABLENOSCROLL".to_string(),   /* 0800 */
+    "".to_string(), /* unknown */
+    "CBS_UPPERCASE".to_string(),         /* 2000 */
+    "CBS_LOWERCASE".to_string(),         /* 4000 */
+    "".to_string()
+];
 
-static const char *const rsrc_static_style[] = {
-    0, 0, 0, 0, 0, /* type */
-    "(unknown flag 0x0020)",
-    "SS_REALSIZECONTROL", /* 0040 */
-    "SS_NOPREFIX",        /* 0080 */
-    "SS_NOTIFY",          /* 0100 */
-    "SS_CENTERIMAGE",     /* 0200 */
-    "SS_RIGHTJUST",       /* 0400 */
-    "SS_REALSIZEIMAGE",   /* 0800 */
-    "SS_SUNKEN",          /* 1000 */
-    "SS_EDITCONTROL",     /* 2000 */
-    0
-};
+pub fn print_rsrc_control_style(class: u8, flags: u32){
 
-static const char *const rsrc_listbox_style[] = {
-    "LBS_NOTIFY",            /* 0001 */
-    "LBS_SORT",              /* 0002 */
-    "LBS_NOREDRAW",          /* 0004 */
-    "LBS_MULTIPLESEL",       /* 0008 */
-    "LBS_OWNERDRAWFIXED",    /* 0010 */
-    "LBS_OWNERDRAWVARIABLE", /* 0020 */
-    "LBS_HASSTRINGS",        /* 0040 */
-    "LBS_USETABSTOPS",       /* 0080 */
-    "LBS_NOINTEGRALHEIGHT",  /* 0100 */
-    "LBS_MULTICOLUMN",       /* 0200 */
-    "LBS_WANTKEYBOARDINPUT", /* 0400 */
-    "LBS_EXTENDEDSEL",       /* 0800 */
-    "LBS_DISABLENOSCROLL",   /* 1000 */
-    "LBS_NODATA",            /* 2000 */
-    "LBS_NOSEL",             /* 4000 */
-    "LBS_COMBOBOX",          /* 8000 */
-    0
-};
+    let mut buffer = String::new();
 
-static const char *const rsrc_combobox_style[] = {
-    0, 0, /* type */
-    0, 0, /* unknown */
-    "CBS_OWNERDRAWFIXED",    /* 0010 */
-    "CBS_OWNERDRAWVARIABLE", /* 0020 */
-    "CBS_AUTOHSCROLL",       /* 0040 */
-    "CBS_OEMCONVERT",        /* 0080 */
-    "CBS_SORT",              /* 0100 */
-    "CBS_HASSTRINGS",        /* 0200 */
-    "CBS_NOINTEGRALHEIGHT",  /* 0400 */
-    "CBS_DISABLENOSCROLL",   /* 0800 */
-    0, /* unknown */
-    "CBS_UPPERCASE",         /* 2000 */
-    "CBS_LOWERCASE",         /* 4000 */
-    0
-};
-
-static void print_rsrc_control_style(u8 class, u32 flags){
-    int i;
-    char buffer[1024];
-    buffer[0] = 0;
-
-    printf("        Style: ");
+    print!("        Style: ");
     
-    switch (class){
-    case 0x80: /* Button */
+    match class {
+    0x80 => {
+        /* Button */
         strcpy(buffer, rsrc_button_type[flags & 0x000f]);
-        
-        if (flags & 0x0010) strcat(buffer, ", (unknown flag 0x0010)");
-        if (flags & 0x0020) strcat(buffer, ", BS_LEFTTEXT");
 
-        if ((flags & 0x0040) == 0)
-            strcat(buffer, ", BS_TEXT");
-        else {
-            if (flags & 0x0040) strcat(buffer, ", BS_ICON");
-            if (flags & 0x0080) strcat(buffer, ", BS_BITMAP");
-        }
+        if (flags & 0x0010) { buffer += ", (unknown flag 0x0010)"; }
+        if (flags & 0x0020) { buffer += ", BS_LEFTTEXT"; }
 
-        if      ((flags & 0x0300) == 0x0100) strcat(buffer, ", BS_LEFT");
-        else if ((flags & 0x0300) == 0x0200) strcat(buffer, ", BS_RIGHT");
-        else if ((flags & 0x0300) == 0x0300) strcat(buffer, ", BS_CENTER");
-
-        if      ((flags & 0x0C00) == 0x0400) strcat(buffer, ", BS_TOP");
-        else if ((flags & 0x0C00) == 0x0800) strcat(buffer, ", BS_BOTTOM");
-        else if ((flags & 0x0C00) == 0x0C00) strcat(buffer, ", BS_VCENTER");
-
-        if (flags & 0x1000) strcat(buffer, ", BS_PUSHLIKE");
-        if (flags & 0x2000) strcat(buffer, ", BS_MULTILINE");
-        if (flags & 0x4000) strcat(buffer, ", BS_NOTIFY");
-        if (flags & 0x8000) strcat(buffer, ", BS_FLAT");
-
-        break;
-
-    case 0x81: /* Edit */
-        if      ((flags & 3) == 0) strcpy(buffer, "ES_LEFT");
-        else if ((flags & 3) == 1) strcpy(buffer, "ES_CENTER");
-        else if ((flags & 3) == 2) strcpy(buffer, "ES_RIGHT");
-        else if ((flags & 3) == 3) strcpy(buffer, "(unknown type 3)");
-
-        for (i=2; i<16; i += 1){
-            if (flags & (1<<i)){
-                strcat(buffer, ", ");
-                strcat(buffer, rsrc_edit_style[i]);
-            }
-        }
-        break;
-        
-    case 0x82: /* Static */
-        if ((flags & 0x001f) <= 0x12)
-            strcpy(buffer, rsrc_static_type[flags & 0x001f]);
-        else
-            sprintf(buffer, "(unknown type %d)", flags & 0x001f);
-
-        for (i=5; i<14; i += 1){
-            if (flags & (1<<i)){
-                strcat(buffer, ", ");
-                strcat(buffer, rsrc_static_style[i]);
-            }
-        }
-        break;
-
-    case 0x83: /* ListBox */
-        for (i=0; i<16; i += 1){
-            if (flags & (1<<i)){
-                strcat(buffer, ", ");
-                strcat(buffer, rsrc_listbox_style[i]);
-            }
-        }
-        break;
-
-    case 0x84: /* ScrollBar */
-        if (flags & 0x18){
-            if (flags & 0x08)
-                strcpy(buffer, "SBS_SIZEBOX");
-            else if (flags & 0x10)
-                strcpy(buffer, "SBS_SIZEGRIP");
-            if (flags & 0x02)
-                strcat(buffer, ", SBS_SIZEBOXTOPLEFTALIGN");
-            if (flags & 0x04)
-                strcat(buffer, ", SBS_SIZEBOXBOTTOMRIGHTALIGN");
-        } else if (flags & 0x01){
-            strcpy(buffer, "SBS_VERT");
-            if (flags & 0x02)
-                strcat(buffer, ", SBS_LEFTALIGN");
-            if (flags & 0x04)
-                strcat(buffer, ", SBS_RIGHTALIGN");
+        if ((flags & 0x0040) == 0) {
+            buffer += ", BS_TEXT";
         } else {
-            strcpy(buffer, "SBS_HORZ");
-            if (flags & 0x02)
-                strcat(buffer, ", SBS_TOPALIGN");
-            if (flags & 0x04)
-                strcat(buffer, ", SBS_BOTTOMALIGN");
+            if (flags & 0x0040) { buffer += ", BS_ICON"; }
+            if (flags & 0x0080) { buffer += ", BS_BITMAP"; }
         }
-        if (flags & 0xffe0)
-            sprintf(buffer+strlen(buffer), ", (unknown flags 0x%04x)", flags & 0xffe0);
-        break;
 
-    case 0x85: /* ComboBox */
-        if ((flags & 3) == 1)
-            strcat(buffer, ", CBS_SIMPLE");
-        else if ((flags & 3) == 2)
-            strcat(buffer, ", CBS_DROPDOWN");
-        else if ((flags & 3) == 3)
-            strcat(buffer, ", CBS_DROPDOWNLIST");
-        
-        for (i=4; i<15; i += 1){
-            if ((flags & (1<<i)) && rsrc_combobox_style[i]){
-                strcat(buffer, ", ");
-                strcat(buffer, rsrc_combobox_style[i]);
+        if ((flags & 0x0300) == 0x0100) { buffer += ", BS_LEFT"; } else if ((flags & 0x0300) == 0x0200) { buffer += ", BS_RIGHT"; } else if ((flags & 0x0300) == 0x0300) { buffer += ", BS_CENTER"; }
+
+        if ((flags & 0x0C00) == 0x0400) { buffer += ", BS_TOP"); } else if ((flags & 0x0C00) == 0x0800) { buffer += ", BS_BOTTOM"; } else if ((flags & 0x0C00) == 0x0C00) { buffer += ", BS_VCENTER"; }
+
+        if (flags & 0x1000) { buffer += ", BS_PUSHLIKE"; }
+        if (flags & 0x2000) { buffer += ", BS_MULTILINE"; }
+        if (flags & 0x4000) { buffer += ", BS_NOTIFY"; }
+        if (flags & 0x8000) { buffer += ", BS_FLAT"; }
+    }
+
+    0x81 => {
+        /* Edit */
+        if (flags & 3) == 0 { buffer += "ES_LEFT"; } else if (flags & 3) == 1 { buffer += "ES_CENTER"; } else if (flags & 3) == 2 { buffer += "ES_RIGHT"; } else if (flags & 3) == 3 {
+            buffer += "(unknown type 3)";
+        }
+        for i in 2 .. 16 {
+            if flags & (1 << i) {
+                buffer += ", ";
+                buffer += rsrc_edit_style[i];
             }
         }
-        if (flags & 0x900c)
-            sprintf(buffer+strlen(buffer), ", (unknown flags 0x%04x)", flags & 0x900c);
-        break;
+    }
 
-    default:
-        sprintf(buffer, "0x%04x", flags & 0xffff);
+    0x82 => {
+        /* Static */
+        if (flags & 0x001f) <= 0x12 {
+            buffer += rsrc_static_type[flags & 0x001f];
+        } else {
+            buffer += fmt!("(unknown type {})", flags & 0x001f);
+        }
+
+        for i in 5..14 {
+            if flags & (1 << i) {
+                buffer += ", ";
+                buffer += &*rsrc_static_style[i];
+            }
+        }
+    }
+
+
+    0x83 => {
+        /* ListBox */
+        for i in 0 .. 16 {
+            if flags & (1 << i) > 0 {
+                buffer += ", ";
+                buffer += &*rsrc_listbox_style[i];
+            }
+        }
+    }
+
+
+    0x84 => /* ScrollBar */{
+        if (flags & 0x18) {
+            if (flags & 0x08) {
+                buffer += "SBS_SIZEBOX";
+            } else if (flags & 0x10) {
+                buffer += "SBS_SIZEGRIP";
+            }
+            if (flags & 0x02) {
+                buffer += ", SBS_SIZEBOXTOPLEFTALIGN";
+            }
+            if (flags & 0x04) {
+                buffer += ", SBS_SIZEBOXBOTTOMRIGHTALIGN";
+            }
+        } else if (flags & 0x01) {
+            buffer += "SBS_VERT";
+            if (flags & 0x02) {
+                buffer += ", SBS_LEFTALIGN";
+            }
+            if (flags & 0x04) {
+                buffer += ", SBS_RIGHTALIGN";
+            }
+        } else {
+            buffer += "SBS_HORZ";
+            if (flags & 0x02) {
+                buffer += ", SBS_TOPALIGN";
+            }
+            if (flags & 0x04) {
+                buffer += ", SBS_BOTTOMALIGN";
+            }
+        }
+        if (flags & 0xffe0) {
+            buffer += fmt!(", (unknown flags 0x{:04x})", flags & 0xffe0);
+        }
+    }
+    0x85 => {
+        /* ComboBox */
+        if (flags & 3) == 1 {
+            buffer += ", CBS_SIMPLE";
+        } else if (flags & 3) == 2 {
+            buffer += ", CBS_DROPDOWN";
+        } else if (flags & 3) == 3 {
+            buffer += ", CBS_DROPDOWNLIST";
+        }
+
+        for i in 4..15 {
+            if (flags & (1 << i) > 0) && !rsrc_combobox_style[i].is_empty() {
+                buffer += ", ";
+                buffer += &*rsrc_combobox_style[i];
+            }
+        }
+        if (flags & 0x900c) {
+            buffer += fmt!(", (unknown flags 0x{:04x})", flags & 0x900c);
+        }
+    }
+
+
+    _ => {
+        buffer += fmt!("0x{:04x}", flags & 0xffff);
+    }
     }
 
     /* and finally, WS_ flags */
-    for (i=16; i<32; i += 1){
+    for i in 16 .. 32 {
         if (flags & (1<<i)){
-            strcat(buffer, ", ");
-            strcat(buffer, rsrc_dialog_style[i]);
+            buffer += ", ";
+            buffer += &*rsrc_dialog_style[i];
         }
     }
 
-    printf("{}\n", (buffer[0] == ',') ? (buffer+2) : buffer);
+    print!("{}\n", if buffer[0] == ',' { (&buffer[2..])} else { &buffer });
 }
 
-struct dialog_control {
-    u16 x;
-    u16 y;
-    u16 width;
-    u16 height;
-    u16 id;
-    u32 style;
-    u8 class;
+pub struct dialog_control {
+    x: u16,
+     y: u16,
+     width: u16,
+     height: u16,
+     id: u16,
+     style: u32,
+     class: u8,
 };
 
-static const char *const rsrc_dialog_class[] = {
-    "Button",    /* 80 */
-    "Edit",      /* 81 */
-    "Static",    /* 82 */
-    "ListBox",   /* 83 */
-    "ScrollBar", /* 84 */
-    "ComboBox",  /* 85 */
-    0
-};
+pub const rsrc_dialog_class: [String;7] = [
+    "Button".to_string(),    /* 80 */
+    "Edit".to_string(),      /* 81 */
+    "Static".to_string(),    /* 82 */
+    "ListBox".to_string(),   /* 83 */
+    "ScrollBar".to_string(), /* 84 */
+    "ComboBox".to_string(),  /* 85 */
+    "".to_string(),
+];
 
-static usize print_rsrc_menu_items(int depth, usize offset)
+pub fn print_rsrc_menu_items(map: &Vec<u8>, depth: i32, offset: usize) -> usize
 {
-    u16 flags, id;
-    char buffer[1024];
-    int i;
+    // u16 flags, id;
+    // char buffer[1024];
+    // int i;
+    let mut buffer = String::new();
+    let mut flags = 0u16;
+    let mut id = 0u16;
 
     loop {
-        flags = read_word(offset);
+        flags = read_word(map, offset);
         offset += 2;
 
-        printf("        ");
-        for (i = 0; i < depth; i += 1) printf("  ");
+        print!("        ");
+        for (i = 0; i < depth; i += 1) print!("  ");
         if (!(flags & 0x0010)) {
             /* item ID */
             id = read_word(offset);
             offset += 2;
-            printf("%d: ", id);
+            print!("%d: ", id);
         }
 
         offset = print_escaped_string0(offset);
 
         /* and print flags */
         buffer[0] = '\0';
-        if (flags & 0x0001) strcat(buffer, ", grayed");
-        if (flags & 0x0002) strcat(buffer, ", inactive");
-        if (flags & 0x0004) strcat(buffer, ", bitmap");
-        if (flags & 0x0008) strcat(buffer, ", checked");
-        if (flags & 0x0010) strcat(buffer, ", popup");
-        if (flags & 0x0020) strcat(buffer, ", menu bar break");
-        if (flags & 0x0040) strcat(buffer, ", menu break");
+        if (flags & 0x0001) buffer += ", grayed";
+        if (flags & 0x0002) buffer += ", inactive";
+        if (flags & 0x0004) buffer += ", bitmap";
+        if (flags & 0x0008) buffer += ", checked";
+        if (flags & 0x0010) buffer += ", popup";
+        if (flags & 0x0020) buffer += ", menu bar break";
+        if (flags & 0x0040) buffer += ", menu break";
         /* don't print ENDMENU */
         if (flags & 0xff00)
-            sprintf(buffer+strlen(buffer), ", unknown flags 0x%04x", flags & 0xff00);
+            sprintf(buffer+strlen(buffer), ", unknown flags 0x{:04x}", flags & 0xff00);
     
         if (buffer[0])
-            printf(" ({})", buffer+2);
-        putchar('\n');
+            print!(" ({})", buffer+2);
+        print!('\n');
 
         /* if we have a popup, recurse */
         if (flags & 0x0010)
@@ -606,63 +593,63 @@ static void print_rsrc_version_flags(struct version_header header){
     buffer[0] = '\0';
     for (i=0;i<6;i += 1){
         if (header.flags_file & (1<<i)){
-            strcat(buffer, ", ");
+            buffer += ", ";
             strcat(buffer, rsrc_version_file[i]);
         }
     }
     if (header.flags_file & 0xffc0)
-        sprintf(buffer+strlen(buffer), ", (unknown flags 0x%04x)", header.flags_file & 0xffc0);
-    printf("    File flags: ");
+        sprintf(buffer+strlen(buffer), ", (unknown flags 0x{:04x})", header.flags_file & 0xffc0);
+    print!("    File flags: ");
     if (header.flags_file)
-        printf("{}", buffer+2);
+        print!("{}", buffer+2);
 
     buffer[0] = '\0';
     if (header.flags_os == 0)
-        strcpy(buffer, ", VOS_UNKNOWN");
+        buffer += ", VOS_UNKNOWN";
     else {
         switch (header.flags_os & 0xffff){
-        case 1: strcpy(buffer, ", VOS__WINDOWS16"); break;
-        case 2: strcpy(buffer, ", VOS__PM16"); break;
-        case 3: strcpy(buffer, ", VOS__PM32"); break;
-        case 4: strcpy(buffer, ", VOS__WINDOWS32"); break;
-        default: sprintf(buffer, ", (unknown OS 0x%04x)", header.flags_os & 0xffff);
+        case 1: buffer += ", VOS__WINDOWS16"; break;
+        case 2: buffer += ", VOS__PM16"; break;
+        case 3: buffer += ", VOS__PM32"; break;
+        case 4: buffer += ", VOS__WINDOWS32"; break;
+        default: sprintf(buffer, ", (unknown OS 0x{:04x})", header.flags_os & 0xffff);
         }
         switch (header.flags_os >> 16){
-        case 1: strcat(buffer, ", VOS_DOS"); break;
-        case 2: strcat(buffer, ", VOS_OS216"); break;
-        case 3: strcat(buffer, ", VOS_OS232"); break;
-        case 4: strcat(buffer, ", VOS_NT"); break;
-        case 5: strcat(buffer, ", VOS_WINCE"); break; /* found in WINE */
-        default: sprintf(buffer+strlen(buffer), ", (unknown OS 0x%04x)", header.flags_os >> 16);
+        case 1: buffer += ", VOS_DOS"; break;
+        case 2: buffer += ", VOS_OS216"; break;
+        case 3: buffer += ", VOS_OS232"; break;
+        case 4: buffer += ", VOS_NT"; break;
+        case 5: buffer += ", VOS_WINCE"; break; /* found in WINE */
+        default: sprintf(buffer+strlen(buffer), ", (unknown OS 0x{:04x})", header.flags_os >> 16);
         }
     }
-    printf("\n    OS flags: {}\n", buffer+2);
+    print!("\n    OS flags: {}\n", buffer+2);
 
     if (header.flags_type <= 7)
-        printf("    Type: {}\n", rsrc_version_type[header.flags_type]);
+        print!("    Type: {}\n", rsrc_version_type[header.flags_type]);
     else
-        printf("    Type: (unknown type %d)\n", header.flags_type);
+        print!("    Type: (unknown type %d)\n", header.flags_type);
 
     if (header.flags_type == 3){ /* driver */
         if (header.flags_subtype <= 12)
-            printf("    Subtype: {} driver\n", rsrc_version_subtype_drv[header.flags_subtype]);
+            print!("    Subtype: {} driver\n", rsrc_version_subtype_drv[header.flags_subtype]);
         else
-            printf("    Subtype: (unknown subtype %d)\n", header.flags_subtype);
+            print!("    Subtype: (unknown subtype %d)\n", header.flags_subtype);
     } else if (header.flags_type == 4){ /* font */
-        if (header.flags_subtype == 0)      printf("    Subtype: unknown font\n");
-        else if (header.flags_subtype == 1) printf("    Subtype: raster font\n");
-        else if (header.flags_subtype == 2) printf("    Subtype: vector font\n");
-        else if (header.flags_subtype == 3) printf("    Subtype: TrueType font\n");
-        else printf("    Subtype: (unknown subtype %d)\n", header.flags_subtype);
+        if (header.flags_subtype == 0)      print!("    Subtype: unknown font\n");
+        else if (header.flags_subtype == 1) print!("    Subtype: raster font\n");
+        else if (header.flags_subtype == 2) print!("    Subtype: vector font\n");
+        else if (header.flags_subtype == 3) print!("    Subtype: TrueType font\n");
+        else print!("    Subtype: (unknown subtype %d)\n", header.flags_subtype);
     } else if (header.flags_type == 5){ /* VXD */
-        printf("    Virtual device ID: %d\n", header.flags_subtype);
+        print!("    Virtual device ID: %d\n", header.flags_subtype);
     } else if (header.flags_subtype){
         /* according to MSDN nothing else is valid */
-        printf("    Subtype: (unknown subtype %d)\n", header.flags_subtype);
+        print!("    Subtype: (unknown subtype %d)\n", header.flags_subtype);
     }
 };
 
-static void print_rsrc_strings(usize offset, usize end)
+static void print_rsrc_strings(offset: usize, end: usize)
 {
     u16 length;
 
@@ -670,10 +657,10 @@ static void print_rsrc_strings(usize offset, usize end)
     {
         /* first length is redundant */
         length = read_word(offset + 2);
-        printf("        ");
+        print!("        ");
         offset = print_escaped_string0(offset + 4);
         offset = (offset + 3) & ~3;
-        printf(": ");
+        print!(": ");
         /* According to MSDN this is zero-terminated, and in most cases it is.
          * However, at least one application (msbsolar) has NEs with what
          * appears to be a non-zero-terminated string. In Windows this is cut
@@ -685,11 +672,11 @@ static void print_rsrc_strings(usize offset, usize end)
         print_escaped_string(offset, length ? length - 1 : 0);
         offset += length;
         offset = (offset + 3) & ~3;
-        putchar('\n');
+        print!('\n');
     }
 };
 
-static void print_rsrc_stringfileinfo(usize offset, usize end)
+static void print_rsrc_stringfileinfo(offset: usize, end: usize)
 {
     u16 length;
     unsigned int lang = 0;
@@ -703,14 +690,14 @@ static void print_rsrc_stringfileinfo(usize offset, usize end)
 
         /* codepage and language code */
         sscanf(read_data(offset + 4), "%4x%4x", &lang, &codepage);
-        printf("    String table (lang=%04x, codepage=%04x):\n", lang, codepage);
+        print!("    String table (lang={:04x}, codepage={:04x}):\n", lang, codepage);
 
         print_rsrc_strings(offset + 16, offset + length);
         offset += length;
     }
 };
 
-static void print_rsrc_varfileinfo(usize offset, usize end)
+static void print_rsrc_varfileinfo(offset: usize, end: usize)
 {
     while (offset < end)
     {
@@ -718,17 +705,17 @@ static void print_rsrc_varfileinfo(usize offset, usize end)
         u16 length = read_word(offset + 2), i;
         offset += 16;
         for (i = 0; i < length; i += 4)
-            printf("    Var (lang=%04x, codepage=%04x)\n", read_word(offset + i), read_word(offset + i + 2));
+            print!("    Var (lang={:04x}, codepage={:04x})\n", read_word(offset + i), read_word(offset + i + 2));
         offset += length;
     }
 };
 
-static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id)
+static void print_rsrc_resource(u16 type, offset: usize, size_t length, u16 rn_id)
 {
     switch (type)
     {
     case 0x8001: /* Cursor */
-        printf("    Hotspot: (%d, %d)\n", read_word(offset), read_word(offset + 2));
+        print!("    Hotspot: (%d, %d)\n", read_word(offset), read_word(offset + 2));
         offset += 4;
         /* fall through */
 
@@ -736,26 +723,26 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
     case 0x8003: /* Icon */
         if (read_dword(offset) == 12) /* BITMAPCOREHEADER */
         {
-            printf("    Size: %dx%d\n", read_word(offset + 4), read_word(offset + 6));
-            printf("    Planes: %d\n", read_word(offset + 8));
-            printf("    Bit depth: %d\n", read_word(offset + 10));
+            print!("    Size: %dx%d\n", read_word(offset + 4), read_word(offset + 6));
+            print!("    Planes: %d\n", read_word(offset + 8));
+            print!("    Bit depth: %d\n", read_word(offset + 10));
         }
         else if (read_dword(offset) == 40) /* BITMAPINFOHEADER */
         {
             const struct header_bitmap_info *header = read_data(offset);
-            printf("    Size: %dx%d\n", header.biWidth, header.biHeight / 2);
-            printf("    Planes: %d\n", header.biPlanes);
-            printf("    Bit depth: %d\n", header.biBitCount);
+            print!("    Size: %dx%d\n", header.biWidth, header.biHeight / 2);
+            print!("    Planes: %d\n", header.biPlanes);
+            print!("    Bit depth: %d\n", header.biBitCount);
             if (header.biCompression <= 13 && rsrc_bmp_compression[header.biCompression])
-                printf("    Compression: {}\n", rsrc_bmp_compression[header.biCompression]);
+                print!("    Compression: {}\n", rsrc_bmp_compression[header.biCompression]);
             else
-                printf("    Compression: (unknown value %d)\n", header.biCompression);
-            printf("    Resolution: %dx%d pixels/meter\n",
+                print!("    Compression: (unknown value %d)\n", header.biCompression);
+            print!("    Resolution: %dx%d pixels/meter\n",
                     header.biXPelsPerMeter, header.biYPelsPerMeter);
-            printf("    Colors used: %d", header.biClrUsed); /* todo: implied */
+            print!("    Colors used: %d", header.biClrUsed); /* todo: implied */
             if (header.biClrImportant)
-                printf(" (%d marked important)", header.biClrImportant);
-            putchar('\n');
+                print!(" (%d marked important)", header.biClrImportant);
+            print!('\n');
         }
         else
             eprint!("Unknown bitmap header size %d.\n", read_dword(offset));
@@ -769,18 +756,18 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             eprint!("Unknown menu version %d\n",extended);
             break;
         }
-        printf(extended ? "    Type: extended\n" : "    Type: standard\n");
+        print!(extended ? "    Type: extended\n" : "    Type: standard\n");
         if (read_word(offset + 2) != extended*4)
             eprint!("Unexpected offset value %d (expected %d).\n", read_word(offset + 2), extended * 4);
         offset += 4;
 
         if (extended)
         {
-            printf("    Help ID: %d\n", read_dword(offset));
+            print!("    Help ID: %d\n", read_dword(offset));
             offset += 4;
         }
 
-        printf("    Items:\n");
+        print!("    Items:\n");
         print_rsrc_menu_items(0, offset);
         break;
     }
@@ -791,25 +778,25 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
         u32 style = read_dword(offset);
         print_rsrc_dialog_style(style);
         count = read_byte(offset + 4);
-        printf("    Position: (%d, %d)\n", read_word(offset + 5), read_word(offset + 7));
-        printf("    Size: %dx%d\n", read_word(offset + 9), read_word(offset + 11));
+        print!("    Position: (%d, %d)\n", read_word(offset + 5), read_word(offset + 7));
+        print!("    Size: %dx%d\n", read_word(offset + 9), read_word(offset + 11));
         if (read_byte(offset + 13) == 0xff){
-            printf("    Menu resource: #%d", read_word(offset + 14));
+            print!("    Menu resource: #%d", read_word(offset + 14));
         } else {
-            printf("    Menu name: ");
+            print!("    Menu name: ");
             offset = print_escaped_string0(offset + 13);
         }
-        printf("\n    Class name: ");
+        print!("\n    Class name: ");
         offset = print_escaped_string0(offset);
-        printf("\n    Caption: ");
+        print!("\n    Caption: ");
         offset = print_escaped_string0(offset);
         if (style & 0x00000040){ /* DS_SETFONT */
             font_size = read_word(offset);
-            printf("\n    Font: ");
+            print!("\n    Font: ");
             offset = print_escaped_string0(offset + 2);
-            printf(" (%d pt)", font_size);
+            print!(" (%d pt)", font_size);
         }
-        putchar('\n');
+        print!('\n');
 
         while (count -= 1){
             const struct dialog_control *control = read_data(offset);
@@ -817,36 +804,36 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
 
             if (control.class & 0x80){
                 if (control.class <= 0x85)
-                    printf("    {}", rsrc_dialog_class[control.class & (~0x80)]);
+                    print!("    {}", rsrc_dialog_class[control.class & (~0x80)]);
                 else
-                    printf("    (unknown class %d)", control.class);
+                    print!("    (unknown class %d)", control.class);
             }
             else
                 offset = print_escaped_string0(offset);
-            printf(" %d:\n", control.id);
+            print!(" %d:\n", control.id);
 
-            printf("        Position: (%d, %d)\n", control.x, control.y);
-            printf("        Size: %dx%d\n", control.width, control.height);
+            print!("        Position: (%d, %d)\n", control.x, control.y);
+            print!("        Size: %dx%d\n", control.width, control.height);
             print_rsrc_control_style(control.class, control.style);
 
             if (read_byte(offset) == 0xff){
                 /* todo: we can check the style for SS_ICON/SS_BITMAP and *maybe* also
                  * refer back to a printed RT_GROUPICON/GROUPCUROR/BITMAP resource. */
-                printf("        Resource: #%d", read_word(offset));
+                print!("        Resource: #%d", read_word(offset));
                 offset += 3;
             } else {
-                printf("        Text: ");
+                print!("        Text: ");
                 offset = print_escaped_string0(offset );
             }
             /* todo: WINE parses this as "data", but all of my testcases return 0. */
             /* read_byte(); */
-            putchar('\n');
+            print!('\n');
         }
     }
     break;
     case 0x8006: /* String */
     {
-        usize cursor = offset;
+        cursor: usize = offset;
         int i = 0;
 
         while (cursor < offset + length)
@@ -854,9 +841,9 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             u8 str_length = read_byte(cursor += 1);
             if (str_length)
             {
-                printf("    %3d (0x%06lx): ", i + ((rn_id & (~0x8000))-1)*16, cursor);
+                print!("    %3d (0x%06lx): ", i + ((rn_id & (~0x8000))-1)*16, cursor);
                 print_escaped_string(cursor, str_length);
-                putchar('\n');
+                print!('\n');
                 cursor += str_length;
             }
             i += 1;
@@ -887,23 +874,23 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             key = read_word();
             id = read_word();
 
-            printf("    ");
+            print!("    ");
 
             if (flags & 0x02)
-                printf("(FNOINVERT) ");
+                print!("(FNOINVERT) ");
 
             if (flags & 0x04)
-                printf("Shift+");
+                print!("Shift+");
             if (flags & 0x08)
-                printf("Ctrl+");
+                print!("Ctrl+");
             if (flags & 0x10)
-                printf("Alt+");
+                print!("Alt+");
             if (flags & 0x60)
                 eprint!("Unknown accelerator flags 0x{:02x}\n", flags & 0x60);
 
             /* fixme: print the key itself */
 
-            printf(": %d\n", id);
+            print!(": %d\n", id);
         } while (!(flags & 0x80));
     }
     break;
@@ -918,22 +905,22 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
          * is stored in the same bytes. */
         u16 count = read_word(offset + 4);
         offset += 6;
-        printf("    Resources: ");
+        print!("    Resources: ");
         if (count -= 1) {
-            printf("#%d", read_word(offset + 12));
+            print!("#%d", read_word(offset + 12));
             offset += 14;
         }
         while (count -= 1) {
-            printf(", #%d", read_word(offset + 12));
+            print!(", #%d", read_word(offset + 12));
             offset += 14;
         }
-        printf("\n");
+        print!("\n");
     }
     break;
     case 0x8010: /* Version */
     {
         const struct version_header *header = read_data(offset);
-        const usize end = offset + header.length;
+        const end: usize = offset + header.length;
 
         if (header.value_length != 52)
             eprint!("Version header length is %d (expected 52).\n", header.value_length);
@@ -945,15 +932,15 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             eprint!("Version header version is %d.%d (expected 1.0).\n", header.struct_1, header.struct_2);
         print_rsrc_version_flags(*header);
 
-        printf("    File version:    %d.%d.%d.%d\n",
+        print!("    File version:    %d.%d.%d.%d\n",
                header.file_1, header.file_2, header.file_3, header.file_4);
-        printf("    Product version: %d.%d.%d.%d\n",
+        print!("    Product version: %d.%d.%d.%d\n",
                header.prod_1, header.prod_2, header.prod_3, header.prod_4);
 
         if (0) {
-        printf("    Created on: ");
+        print!("    Created on: ");
         print_timestamp(header.date_1, header.date_2);
-        putchar('\n');
+        print!('\n');
         }
 
         offset += sizeof(struct version_header);
@@ -965,7 +952,7 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
             const char *key = read_data(offset + 4);
 
             if (value_length)
-                eprint!("Value length is nonzero: %04x\n", value_length);
+                eprint!("Value length is nonzero: {:04x}\n", value_length);
 
             /* "type" is again omitted */
             if (!strcmp(key, "StringFileInfo"))
@@ -981,7 +968,7 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
     }
     default:
     {
-        usize cursor = offset;
+        cursor: usize = offset;
         char len;
         int i;
         /* hexl-style dump */
@@ -989,22 +976,22 @@ static void print_rsrc_resource(u16 type, usize offset, size_t length, u16 rn_id
         {
             len = min(offset + length - cursor, 16);
             
-            printf("    %lx:", cursor);
+            print!("    %lx:", cursor);
             for (i=0; i<16; i += 1){
                 if (!(i & 1))
                     /* Since this is 16 bits, we put a space after (before) every other two bytes. */
-                    putchar(' ');
+                    print!(' ');
                 if (i<len)
-                    printf("{:02x}", read_byte(cursor + i));
+                    print!("{:02x}", read_byte(cursor + i));
                 else
-                    printf("  ");
+                    print!("  ");
             }
-            printf("  ");
+            print!("  ");
             for (i=0; i<len; i += 1){
                 char c = read_byte(cursor + i);
-                putchar(isprint(c) ? c : '.');
+                print!(isprint(c) ? c : '.');
             }
-            putchar('\n');
+            print!('\n');
 
             cursor += len;
         }
@@ -1061,7 +1048,7 @@ struct type_header
     struct resource resources[1];
 };
 
-void print_rsrc(usize start){
+void print_rsrc(start: usize){
     const struct type_header *header;
     u16 align = read_word(start);
     char *idstr;
@@ -1089,13 +1076,13 @@ void print_rsrc(usize start){
                 if ((header.type_id & (~0x8000)) < rsrc_types_count && rsrc_types[header.type_id & (~0x8000)]){
                     if (!filter_resource(rsrc_types[header.type_id & ~0x8000], idstr))
                         goto next;
-                    printf("\n{}", rsrc_types[header.type_id & ~0x8000]);
+                    print!("\n{}", rsrc_types[header.type_id & ~0x8000]);
                 } else {
                     char typestr[7];
-                    sprintf(typestr, "0x%04x", header.type_id);
+                    sprintf(typestr, "0x{:04x}", header.type_id);
                     if (!filter_resource(typestr, idstr))
                         goto next;
-                    printf("\n{}", typestr);
+                    print!("\n{}", typestr);
                 }
             }
             else
@@ -1106,14 +1093,14 @@ void print_rsrc(usize start){
                     free(typestr);
                     goto next;
                 }
-                printf("\n\"{}\"", typestr);
+                print!("\n\"{}\"", typestr);
                 free(typestr);
             }
 
-            printf(" {}", idstr);
-            printf(" (offset = 0x%x, length = %d [0x%x]", rn.offset << align, rn.length << align, rn.length << align);
+            print!(" {}", idstr);
+            print!(" (offset = 0x%x, length = %d [0x%x]", rn.offset << align, rn.length << align, rn.length << align);
             print_rsrc_flags(rn.flags);
-            printf("):\n");
+            print!("):\n");
 
             print_rsrc_resource(header.type_id, rn.offset << align, rn.length << align, rn.id);
 

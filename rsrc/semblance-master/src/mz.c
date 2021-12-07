@@ -30,18 +30,18 @@
 #pragma pack(1)
 
 static void print_header(const struct header_mz *header) {
-    putchar('\n');
-    printf("Minimum extra allocation: %d bytes\n", header->e_minalloc * 16); /* 0a */
-    printf("Maximum extra allocation: %d bytes\n", header->e_maxalloc * 16); /* 0c */
-    printf("Initial stack location: %#x\n", realaddr(header->e_ss, header->e_sp)); /* 0e */
-    printf("Program entry point: %#x\n", realaddr(header->e_cs, header->e_ip)); /* 14 */
-    printf("Overlay number: %d\n", header->e_ovno); /* 1a */
+    print!('\n');
+    print!("Minimum extra allocation: %d bytes\n", header->e_minalloc * 16); /* 0a */
+    print!("Maximum extra allocation: %d bytes\n", header->e_maxalloc * 16); /* 0c */
+    print!("Initial stack location: %#x\n", realaddr(header->e_ss, header->e_sp)); /* 0e */
+    print!("Program entry point: %#x\n", realaddr(header->e_cs, header->e_ip)); /* 14 */
+    print!("Overlay number: %d\n", header->e_ovno); /* 1a */
 }
 
 #ifdef USE_WARN
 #define warn_at(...) \
-    do { fprintf(stderr, "Warning: %05x: ", ip); \
-        fprintf(stderr, __VA_ARGS__); } while(0)
+    do { eprint! "Warning: %05x: ", ip); \
+        eprint! __VA_ARGS__); } while(0)
 #else
 #define warn_at(...)
 #endif
@@ -65,8 +65,8 @@ static void print_code(struct mz *mz) {
     dword ip = 0;
     byte buffer[MAX_INSTR];
 
-    putchar('\n');
-    printf("Code (start = 0x%x, length = 0x%x):\n", mz->start, mz->length);
+    print!('\n');
+    print!("Code (start = 0x%x, length = 0x%x):\n", mz->start, mz->length);
 
     while (ip < mz->length) {
         /* find a valid instruction */
@@ -74,12 +74,12 @@ static void print_code(struct mz *mz) {
             if (opts & DISASSEMBLE_ALL) {
                 /* still skip zeroes */
                 if (read_byte(mz->start + ip) == 0) {
-                    printf("      ...\n");
+                    print!("      ...\n");
                     ip++;
                     while (read_byte(mz->start + ip) == 0) ip++;
                 }
             } else {
-                printf("     ...\n");
+                print!("     ...\n");
                 while ((ip < mz->length) && !(mz->flags[ip] & INSTR_VALID)) ip++;
             }
         }
@@ -94,8 +94,8 @@ static void print_code(struct mz *mz) {
         memcpy(buffer, read_data(mz->start + ip), min(sizeof(buffer), mz->length - ip));
 
         if (mz->flags[ip] & INSTR_FUNC) {
-            printf("\n");
-            printf("%05x <no name>:\n", ip);
+            print!("\n");
+            print!("%05x <no name>:\n", ip);
         }
 
         ip += print_mz_instr(ip, buffer, mz->flags);
@@ -186,7 +186,7 @@ void dumpmz(void) {
 
     readmz(&mz);
 
-    printf("Module type: MZ (DOS executable)\n");
+    print!("Module type: MZ (DOS executable)\n");
 
     if (mode & DUMPHEADER)
         print_header(mz.header);
