@@ -31,8 +31,8 @@
 
 #ifdef USE_WARN
 #define warn_at(...) \
-    do { fprintf(stderr, "Warning: %d:%04x: ", cs, ip); \
-        fprintf(stderr, __VA_ARGS__); } while(0)
+    do { eprint! "Warning: %d:{:04x}: ", cs, ip); \
+        eprint! __VA_ARGS__); } while(0)
 #else
 #define warn_at(...)
 #endif
@@ -87,7 +87,7 @@ static const char *relocate_arg(const struct segment *seg, struct arg *arg, cons
     if (arg->type == SEGPTR && r->size == 3) {
         /* 32-bit relocation on 32-bit pointer, so just copy the name */
         if (r->type == 0) {
-            snprintf(arg->string, sizeof(arg->string), "%d:%04x", r->tseg, r->toffset);
+            snprintf(arg->string, sizeof(arg->string), "%d:{:04x}", r->tseg, r->toffset);
             return r->text;
         } else if (r->type == 1) {
             snprintf(arg->string, sizeof(arg->string), "%s.%d", module, r->toffset);
@@ -143,7 +143,7 @@ static int print_ne_instr(const struct segment *seg, word ip, byte *p, const str
 
     len = get_instr(ip, p, &instr, bits);
 
-    sprintf(ip_string, "%3d:%04x", seg->cs, ip);
+    sprintf(ip_string, "%3d:{:04x}", seg->cs, ip);
 
     /* check for relocations */
     if (seg->instr_flags[instr.args[0].ip] & INSTR_RELOC)
@@ -176,12 +176,12 @@ static void print_disassembly(const struct segment *seg, const struct ne *ne) {
                 /* still skip zeroes */
                 if (read_byte(seg->start + ip) == 0)
                 {
-                    printf("     ...\n");
+                    print!("     ...\n");
                     ip++;
                     while (read_byte(seg->start + ip) == 0) ip++;
                 }
             } else {
-                printf("     ...\n");
+                print!("     ...\n");
                 while ((ip < seg->length) && !(seg->instr_flags[ip] & INSTR_VALID)) ip++;
             }
         }
@@ -195,15 +195,15 @@ static void print_disassembly(const struct segment *seg, const struct ne *ne) {
 
         if (seg->instr_flags[ip] & INSTR_FUNC) {
             char *name = get_entry_name(cs, ip, ne);
-            printf("\n");
-            printf("%d:%04x <%s>:\n", cs, ip, name ? name : "no name");
+            print!("\n");
+            print!("%d:{:04x} <%s>:\n", cs, ip, name ? name : "no name");
             /* don't mark far functions—we can't reliably detect them
              * because of "push cs", and they should be evident anyway. */
         }
 
         ip += print_ne_instr(seg, ip, buffer, ne);
     }
-    putchar('\n');
+    print!('\n');
 }
 
 static void print_data(const struct segment *seg) {
@@ -213,20 +213,20 @@ static void print_data(const struct segment *seg) {
         int len = min(seg->length-ip, 16);
         int i;
 
-        printf("%3d:%04x", seg->cs, ip);
+        print!("%3d:{:04x}", seg->cs, ip);
         for (i=0; i<16; i++) {
             if (i < len)
-                printf(" %02x", read_byte(seg->start + ip + i));
+                print!(" %02x", read_byte(seg->start + ip + i));
             else
-                printf("   ");
+                print!("   ");
         }
-        printf("  ");
+        print!("  ");
         for (i = 0; i < len; ++i)
         {
             char c = read_byte(seg->start + ip + i);
-            putchar(isprint(c) ? c : '.');
+            print!(isprint(c) ? c : '.');
         }
-        putchar('\n');
+        print!('\n');
     }
 }
 
@@ -328,29 +328,29 @@ static void print_segment_flags(word flags) {
     char buffer[1024];
 
     if (flags & 0x0001)
-        strcpy(buffer, "data");
+        buffer += "data";
     else
-        strcpy(buffer, "code");
+        buffer += "code";
 
     /* I think these three should never occur in a file */
-    if (flags & 0x0002) strcat(buffer, ", allocated");
-    if (flags & 0x0004) strcat(buffer, ", loaded");
-    if (flags & 0x0008) strcat(buffer, ", iterated");
+    if (flags & 0x0002) buffer += ", allocated";
+    if (flags & 0x0004) buffer += ", loaded";
+    if (flags & 0x0008) buffer += ", iterated";
         
-    if (flags & 0x0010) strcat(buffer, ", moveable");
-    if (flags & 0x0020) strcat(buffer, ", shareable");
-    if (flags & 0x0040) strcat(buffer, ", preload");
+    if (flags & 0x0010) buffer += ", moveable";
+    if (flags & 0x0020) buffer += ", shareable";
+    if (flags & 0x0040) buffer += ", preload";
     if (flags & 0x0080) strcat(buffer, (flags & 0x0001) ? ", read-only" : ", execute-only");
-    if (flags & 0x0100) strcat(buffer, ", has relocation data");
+    if (flags & 0x0100) buffer += ", has relocation data";
 
     /* there's still an unidentified flag 0x0400 which appears in all of my testcases.
      * but WINE doesn't know what it is, so... */
-    if (flags & 0x0800) strcat(buffer, ", self-loading");
-    if (flags & 0x1000) strcat(buffer, ", discardable");
-    if (flags & 0x2000) strcat(buffer, ", 32-bit");
+    if (flags & 0x0800) buffer += ", self-loading";
+    if (flags & 0x1000) buffer += ", discardable";
+    if (flags & 0x2000) buffer += ", 32-bit";
 
-    if (flags & 0xc608) sprintf(buffer+strlen(buffer), ", (unknown flags 0x%04x)", flags & 0xc608);
-    printf("    Flags: 0x%04x (%s)\n", flags, buffer);
+    if (flags & 0xc608) sprintf(buffer+strlen(buffer), ", (unknown flags 0x{:04x})", flags & 0xc608);
+    print!("    Flags: 0x{:04x} (%s)\n", flags, buffer);
 }
 
 static void read_reloc(const struct segment *seg, word index, struct ne *ne)
@@ -414,12 +414,12 @@ static void read_reloc(const struct segment *seg, word index, struct ne *ne)
         /* One of my testcases has relocation offsets that exceed the length of
          * the segment. Until we figure out what that's about, ignore them. */
         if (offset_cursor >= seg->length) {
-            warn("%d:%04x: Relocation offset exceeds segment length (%04x).\n", seg->cs, offset_cursor, seg->length);
+            warn("%d:{:04x}: Relocation offset exceeds segment length ({:04x}).\n", seg->cs, offset_cursor, seg->length);
             break;
         }
 
         if (seg->instr_flags[offset_cursor] & INSTR_RELOC) {
-            warn("%d:%04x: Infinite loop reading relocation data.\n", seg->cs, offset_cursor);
+            warn("%d:{:04x}: Infinite loop reading relocation data.\n", seg->cs, offset_cursor);
             r->offset_count = 0;
             return;
         }
@@ -537,7 +537,7 @@ void read_segments(off_t start, struct ne *ne)
         /* do nothing */
     } else if (entry_ip >= ne->segments[entry_cs-1].length) {
         /* see note above under relocations */
-        warn("Entry point %d:%04x exceeds segment length (%04x)\n", entry_cs, entry_ip, ne->segments[entry_cs-1].length);
+        warn("Entry point %d:{:04x} exceeds segment length ({:04x})\n", entry_cs, entry_ip, ne->segments[entry_cs-1].length);
     } else {
         ne->segments[entry_cs-1].instr_flags[entry_ip] |= INSTR_FUNC;
         scan_segment(entry_cs, entry_ip, ne);
@@ -565,8 +565,8 @@ void print_segments(struct ne *ne) {
     for (cs = 1; cs <= ne->header.ne_cseg; cs++) {
         seg = &ne->segments[cs-1];
 
-        putchar('\n');
-        printf("Segment %d (start = 0x%lx, length = 0x%x, minimum allocation = 0x%x):\n",
+        print!('\n');
+        print!("Segment %d (start = 0x%lx, length = 0x%x, minimum allocation = 0x%x):\n",
             cs, seg->start, seg->length, seg->min_alloc ? seg->min_alloc : 65536);
         print_segment_flags(seg->flags);
 

@@ -44,7 +44,7 @@ static inline qword read_qword(off_t offset)
 #define min(a,b) (((a)<(b))?(a):(b))
 
 #ifdef USE_WARN
-#define warn(...)       fprintf(stderr, "Warning: " __VA_ARGS__)
+#define warn(...)       eprint! "Warning: " __VA_ARGS__)
 #else
 #define warn(...)
 #endif

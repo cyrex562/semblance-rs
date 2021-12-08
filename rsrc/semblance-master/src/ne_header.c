@@ -31,45 +31,45 @@
 static void print_flags(word flags){
     char buffer[1024];
     
-    if      ((flags & 0x0003) == 0) strcpy(buffer, "no DGROUP");
-    else if ((flags & 0x0003) == 1) strcpy(buffer, "single DGROUP");
-    else if ((flags & 0x0003) == 2) strcpy(buffer, "multiple DGROUPs");
-    else if ((flags & 0x0003) == 3) strcpy(buffer, "(unknown DGROUP type 3)");
-    if (flags & 0x0004) strcat(buffer, ", global initialization");
-    if (flags & 0x0008) strcat(buffer, ", protected mode only");
-    if (flags & 0x0010) strcat(buffer, ", 8086");
-    if (flags & 0x0020) strcat(buffer, ", 80286");
-    if (flags & 0x0040) strcat(buffer, ", 80386");
-    if (flags & 0x0080) strcat(buffer, ", 80x87");
-    if      ((flags & 0x0700) == 0x0100) strcat(buffer, ", fullscreen"); /* FRAMEBUF */
-    else if ((flags & 0x0700) == 0x0200) strcat(buffer, ", console"); /* API compatible */
-    else if ((flags & 0x0700) == 0x0300) strcat(buffer, ", GUI"); /* uses API */
-    else if ((flags & 0x0700) == 0)      strcat(buffer, ", (no subsystem)"); /* none? */
+    if      ((flags & 0x0003) == 0) buffer += "no DGROUP";
+    else if ((flags & 0x0003) == 1) buffer += "single DGROUP";
+    else if ((flags & 0x0003) == 2) buffer += "multiple DGROUPs";
+    else if ((flags & 0x0003) == 3) buffer += "(unknown DGROUP type 3)";
+    if (flags & 0x0004) buffer += ", global initialization";
+    if (flags & 0x0008) buffer += ", protected mode only";
+    if (flags & 0x0010) buffer += ", 8086";
+    if (flags & 0x0020) buffer += ", 80286";
+    if (flags & 0x0040) buffer += ", 80386";
+    if (flags & 0x0080) buffer += ", 80x87";
+    if      ((flags & 0x0700) == 0x0100) buffer += ", fullscreen"; /* FRAMEBUF */
+    else if ((flags & 0x0700) == 0x0200) buffer += ", console"; /* API compatible */
+    else if ((flags & 0x0700) == 0x0300) buffer += ", GUI"; /* uses API */
+    else if ((flags & 0x0700) == 0)      buffer += ", (no subsystem)"; /* none? */
     else sprintf(buffer+strlen(buffer), ", (unknown application type %d)", (flags & 0x0700) >> 8);
-    if (flags & 0x0800) strcat(buffer, ", self-loading"); /* OS/2 family */
-    if (flags & 0x1000) strcat(buffer, ", (unknown flag 0x1000)");
-    if (flags & 0x2000) strcat(buffer, ", contains linker errors");
-    if (flags & 0x4000) strcat(buffer, ", non-conforming program");
-    if (flags & 0x8000) strcat(buffer, ", library");
+    if (flags & 0x0800) buffer += ", self-loading"; /* OS/2 family */
+    if (flags & 0x1000) buffer += ", (unknown flag 0x1000)";
+    if (flags & 0x2000) buffer += ", contains linker errors";
+    if (flags & 0x4000) buffer += ", non-conforming program";
+    if (flags & 0x8000) buffer += ", library";
     
-    printf("Flags: 0x%04x (%s)\n", flags, buffer);
+    print!("Flags: 0x{:04x} (%s)\n", flags, buffer);
 }
 
 static void print_os2flags(word flags){
     char buffer[1024];
 
     buffer[0] = 0;
-    if (flags & 0x0001) strcat(buffer, ", long filename support");
-    if (flags & 0x0002) strcat(buffer, ", 2.x protected mode");
-    if (flags & 0x0004) strcat(buffer, ", 2.x proportional fonts");
-    if (flags & 0x0008) strcat(buffer, ", fast-load area"); /* gangload */
+    if (flags & 0x0001) buffer += ", long filename support";
+    if (flags & 0x0002) buffer += ", 2.x protected mode";
+    if (flags & 0x0004) buffer += ", 2.x proportional fonts";
+    if (flags & 0x0008) buffer += ", fast-load area"; /* gangload */
     if (flags & 0xfff0)
-        sprintf(buffer+strlen(buffer), ", (unknown flags 0x%04x)", flags & 0xfff0);
+        sprintf(buffer+strlen(buffer), ", (unknown flags 0x{:04x})", flags & 0xfff0);
 
     if(buffer[0])
-        printf("OS/2 flags: 0x%04x (%s)\n", flags, buffer+2);
+        print!("OS/2 flags: 0x{:04x} (%s)\n", flags, buffer+2);
     else
-        printf("OS/2 flags: 0x0000\n");
+        print!("OS/2 flags: 0x0000\n");
 }
 
 static const char *const exetypes[] = {
@@ -90,24 +90,24 @@ static void print_header(struct header_ne *header){
      * 3a - offset to segment ref. bytes (same)
      */
 
-    putchar('\n');
-    printf("Linker version: %d.%d\n", header->ne_ver, header->ne_rev); /* 02 */
-    printf("Checksum: %08x\n", header->ne_crc); /* 08 */
+    print!('\n');
+    print!("Linker version: %d.%d\n", header->ne_ver, header->ne_rev); /* 02 */
+    print!("Checksum: %08x\n", header->ne_crc); /* 08 */
     print_flags(header->ne_flags); /* 0c */
-    printf("Automatic data segment: %d\n", header->ne_autodata);
+    print!("Automatic data segment: %d\n", header->ne_autodata);
     if (header->ne_unused != 0)
         warn("Header byte at position 0f has value 0x%02x.\n", header->ne_unused);
-    printf("Heap size: %d bytes\n", header->ne_heap); /* 10 */
-    printf("Stack size: %d bytes\n", header->ne_stack); /* 12 */
-    printf("Program entry point: %d:%04x\n", header->ne_cs, header->ne_ip); /* 14 */
-    printf("Initial stack location: %d:%04x\n", header->ne_ss, header->ne_sp); /* 18 */
+    print!("Heap size: %d bytes\n", header->ne_heap); /* 10 */
+    print!("Stack size: %d bytes\n", header->ne_stack); /* 12 */
+    print!("Program entry point: %d:{:04x}\n", header->ne_cs, header->ne_ip); /* 14 */
+    print!("Initial stack location: %d:{:04x}\n", header->ne_ss, header->ne_sp); /* 18 */
     if (header->ne_exetyp <= 5) /* 36 */
-        printf("Target OS: %s\n", exetypes[header->ne_exetyp]);
+        print!("Target OS: %s\n", exetypes[header->ne_exetyp]);
     else
-        printf("Target OS: (unknown value %d)\n", header->ne_exetyp);
+        print!("Target OS: (unknown value %d)\n", header->ne_exetyp);
     print_os2flags(header->ne_flagsothers); /* 37 */
-    printf("Swap area: %d\n", header->ne_swaparea); /* 3c */
-    printf("Expected Windows version: %d.%d\n", /* 3e */
+    print!("Swap area: %d\n", header->ne_swaparea); /* 3c */
+    print!("Expected Windows version: %d.%d\n", /* 3e */
            header->ne_expver_maj, header->ne_expver_min);
 }
 
@@ -117,11 +117,11 @@ static void print_export(struct ne *ne) {
     for (i = 0; i < ne->entcount; i++)
         if (ne->enttab[i].segment == 0xfe)
             /* absolute value */
-            printf("\t%5d\t   %04x\t%s\n", i+1, ne->enttab[i].offset, ne->enttab[i].name ? ne->enttab[i].name : "<no name>");
+            print!("\t%5d\t   {:04x}\t%s\n", i+1, ne->enttab[i].offset, ne->enttab[i].name ? ne->enttab[i].name : "<no name>");
         else if (ne->enttab[i].segment)
-            printf("\t%5d\t%2d:%04x\t%s\n", i+1, ne->enttab[i].segment,
+            print!("\t%5d\t%2d:{:04x}\t%s\n", i+1, ne->enttab[i].segment,
                 ne->enttab[i].offset, ne->enttab[i].name ? ne->enttab[i].name : "<no name>");
-    putchar('\n');
+    print!('\n');
 }
 
 static void print_specfile(struct ne *ne) {
@@ -149,20 +149,20 @@ static void print_specfile(struct ne *ne) {
 static int demangle_protection(char *buffer, char *start, char *prot, char *func) {
     if (*start >= 'A' && *start <= 'V') {
         if ((*start-'A') & 2)
-            strcat(buffer, "static ");
+            buffer += "static ";
         if ((*start-'A') & 4)
-            strcat(buffer, "virtual ");
+            buffer += "virtual ";
         if (!((*start-'A') & 1))
-            strcat(buffer, "near ");
+            buffer += "near ";
         if (((*start-'A') & 24) == 0)
-            strcat(buffer, "private ");
+            buffer += "private ";
         else if (((*start-'A') & 24) == 8)
-            strcat(buffer, "protected ");
+            buffer += "protected ";
         else if (((*start-'A') & 24) == 16)
-            strcat(buffer, "public ");
+            buffer += "public ";
         *prot = *start;
     } else if (*start == 'Y') {
-        strcat(buffer, "near ");
+        buffer += "near ";
     } else if (*start == 'Z') {
         /* normally we'd mark far and not near, but most functions which
          * are going to have an exported name will be far. */
@@ -171,7 +171,7 @@ static int demangle_protection(char *buffer, char *start, char *prot, char *func
          * followed by either a number, or a string of text and then @. */
         *prot = 'V'; /* just pretend that for now */
         if (start[1] >= '0' && start[1] <= '9') {
-            strcat(buffer, "(X0) ");
+            buffer += "(X0) ";
             buffer[strlen(buffer)-3] = start[1];
             return 2;
         } else {
@@ -184,7 +184,7 @@ static int demangle_protection(char *buffer, char *start, char *prot, char *func
          * a number (often 7 or 3). */
         demangle_protection(buffer, start+1, prot, func);
         if (start[3] >= '0' && start[3] <= '9') {
-            strcat(buffer, "(_00) ");
+            buffer += "(_00) ";
             buffer[strlen(buffer)-4] = start[2];
             buffer[strlen(buffer)-3] = start[3];
             return 4;
@@ -217,7 +217,7 @@ static const char *int_types[] = {
 static int demangle_type(char **known_names, char *buffer, char *type) {
     if (*type >= 'C' && *type <= 'K') {
         strcat(buffer, int_types[*type-'C']);
-        strcat(buffer, " ");
+        buffer += " ";
         return 1;
     }
 
@@ -227,17 +227,17 @@ static int demangle_type(char **known_names, char *buffer, char *type) {
     {
         int ret;
         if ((type[1]-'A') & 1)
-            strcat(buffer, "const ");
+            buffer += "const ";
         if ((type[1]-'A') & 2)
-            strcat(buffer, "volatile ");
+            buffer += "volatile ";
         ret = demangle_type(known_names, buffer, type+2);
         if (!((type[1]-'A') & 4))
-            strcat(buffer, "near ");
+            buffer += "near ";
         strcat(buffer, (*type == 'A') ? "&" : "*");
         return ret+2;
     }
-    case 'M': strcat(buffer, "float "); return 1;
-    case 'N': strcat(buffer, "double "); return 1;
+    case 'M': buffer += "float "; return 1;
+    case 'N': buffer += "double "; return 1;
     case 'U':
     case 'V':
     {
@@ -247,7 +247,7 @@ static int demangle_type(char **known_names, char *buffer, char *type) {
         if (type[1] >= '0' && type[1] <= '9')
         {
             strcat(buffer, known_names[type[1] - '0']);
-            strcat(buffer, " ");
+            buffer += " ";
             return 3;
         }
 
@@ -266,10 +266,10 @@ static int demangle_type(char **known_names, char *buffer, char *type) {
                 break;
             }
         }
-        strcat(buffer, " ");
+        buffer += " ";
         return (end+1)-type;
     }
-    case 'X': strcat(buffer, "void "); return 1;
+    case 'X': buffer += "void "; return 1;
     default: return 0;
     }
 }
@@ -314,7 +314,7 @@ static char *demangle(char *func) {
     /* This should mark the calling convention. Always seems to be A,
      * but this corroborates the function body which uses CDECL. */
     if (*p == 'A'); /* strcat(buffer, "__cdecl "); */
-    else if (*p == 'C') strcat(buffer, "__pascal ");
+    else if (*p == 'C') buffer += "__pascal ";
     else warn("Unknown calling convention %c for function %s\n", *p, func);
 
     /* This marks the return value. */
@@ -334,15 +334,15 @@ static char *demangle(char *func) {
         while (*start != '?' && *start != '@') start--;
         strncat(buffer, start+1, end-(start+1));
         if (*start == '?') break;
-        strcat(buffer, "::");
+        buffer += "::";
         end = start;
     }
 
     /* Print the arguments. */
     if (*p == 'X') {
-        strcat(buffer, "(void)");
+        buffer += "(void)";
     } else {
-        strcat(buffer, "(");
+        buffer += "(";
         while (*p != '@') {
             if (*p >= '0' && *p <= '9') {
                 strcat(buffer, known_types[*p - '0']);
@@ -360,7 +360,7 @@ static char *demangle(char *func) {
                 }
                 p += len;
             }
-            strcat(buffer, ", ");
+            buffer += ", ";
         }
         buffer[strlen(buffer)-2] = ')';
         buffer[strlen(buffer)-1] = 0;
@@ -469,8 +469,8 @@ static void load_exports(struct import_module *module) {
         sprintf(spec_name, "spec/%.8s.ORD", module->name);
         specfile = fopen(spec_name, "r");
         if (!specfile) {
-            fprintf(stderr, "Note: couldn't find specfile for module %s; exported names won't be given.\n", module->name);
-            fprintf(stderr, "      To create a specfile, run `dumpne -o <module.dll>'.\n");
+            eprint! "Note: couldn't find specfile for module %s; exported names won't be given.\n", module->name);
+            eprint! "      To create a specfile, run `dumpne -o <module.dll>'.\n");
             module->exports = NULL;
             module->export_count = 0;
             return;
@@ -492,7 +492,7 @@ static void load_exports(struct import_module *module) {
         if (line[0] == '#' || line[0] == '\n') continue;
         if ((p = strchr(line, '\n'))) *p = 0;   /* kill final newline */
         if (sscanf(line, "%hu", &ordinal) != 1) {
-            fprintf(stderr, "Error reading specfile near line: `%s'\n", line);
+            eprint! "Error reading specfile near line: `%s'\n", line);
             continue;
         }
         module->exports[count].ordinal = ordinal;
@@ -592,25 +592,25 @@ void dumpne(off_t offset_ne) {
         return;
     }
 
-    printf("Module type: NE (New Executable)\n");
-    printf("Module name: %s\n", ne.name);
+    print!("Module type: NE (New Executable)\n");
+    print!("Module name: %s\n", ne.name);
     if (ne.description)
-        printf("Module description: %s\n", ne.description);
+        print!("Module description: %s\n", ne.description);
 
     if (mode & DUMPHEADER)
         print_header(&ne.header);
 
     if (mode & DUMPEXPORT) {
-        putchar('\n');
-        printf("Exports:\n");
+        print!('\n');
+        print!("Exports:\n");
         print_export(&ne);
     }
 
     if (mode & DUMPIMPORT) {
-        putchar('\n');
-        printf("Imported modules:\n");
+        print!('\n');
+        print!("Imported modules:\n");
         for (i = 0; i < ne.header.ne_cmod; i++)
-            printf("\t%s\n", ne.imptab[i].name);
+            print!("\t%s\n", ne.imptab[i].name);
     }
 
     if (mode & DISASSEMBLE)
@@ -620,7 +620,7 @@ void dumpne(off_t offset_ne) {
         if (ne.header.ne_rsrctab != ne.header.ne_restab)
             print_rsrc(offset_ne + ne.header.ne_rsrctab);
         else
-            printf("No resource table\n");
+            print!("No resource table\n");
     }
 
     freene(&ne);

@@ -28,8 +28,8 @@
 
 #ifdef USE_WARN
 #define warn_at(...) \
-    do { fprintf(stderr, "Warning: %x: ", ip); \
-        fprintf(stderr, __VA_ARGS__); } while(0)
+    do { eprint! "Warning: %x: ", ip); \
+        eprint! __VA_ARGS__); } while(0)
 #else
 #define warn_at(...)
 #endif
@@ -236,12 +236,12 @@ static void print_disassembly(const struct section *sec, const struct pe *pe) {
             if (opts & DISASSEMBLE_ALL) {
                 /* still skip zeroes */
                 if (read_byte(sec->offset + relip) == 0) {
-                    printf("     ...\n");
+                    print!("     ...\n");
                     relip++;
                     while (read_byte(sec->offset + relip) == 0) relip++;
                 }
             } else {
-                printf("     ...\n");
+                print!("     ...\n");
                 while ((relip < sec->length) && (relip < sec->min_alloc) && !(sec->instr_flags[relip] & INSTR_VALID)) relip++;
             }
         }
@@ -260,13 +260,13 @@ static void print_disassembly(const struct section *sec, const struct pe *pe) {
 
         if (sec->instr_flags[relip] & INSTR_FUNC) {
             const char *name = get_export_name(ip, pe);
-            printf("\n");
-            printf("%lx <%s>:\n", absip, name ? name : "no name");
+            print!("\n");
+            print!("%lx <%s>:\n", absip, name ? name : "no name");
         }
 
         relip += print_pe_instr(sec, ip, buffer, pe);
     }
-    putchar('\n');
+    print!('\n');
 }
 
 static void print_data(const struct section *sec, struct pe *pe) {
@@ -285,20 +285,20 @@ static void print_data(const struct section *sec, struct pe *pe) {
         if (!pe_rel_addr)
             absip += pe->imagebase;
 
-        printf("%8lx", absip);
+        print!("%8lx", absip);
         for (i=0; i<16; i++) {
             if (i < len)
-                printf(" %02x", read_byte(sec->offset + relip + i));
+                print!(" %02x", read_byte(sec->offset + relip + i));
             else
-                printf("   ");
+                print!("   ");
         }
-        printf("  ");
+        print!("  ");
         for (i = 0; i < len; ++i)
         {
             char c = read_byte(sec->offset + relip + i);
-            putchar(isprint(c) ? c : '.');
+            print!(isprint(c) ? c : '.');
         }
-        putchar('\n');
+        print!('\n');
     }
 }
 
@@ -423,37 +423,37 @@ static void print_section_flags(dword flags) {
     /* Most of these shouldn't occur in an image file, either because they're
      * COFF flags that PE doesn't want or because they're object-only. Print
      * the COFF names. */
-    if (flags & 0x00000001) strcat(buffer, ", STYP_DSECT");
-    if (flags & 0x00000002) strcat(buffer, ", STYP_NOLOAD");
-    if (flags & 0x00000004) strcat(buffer, ", STYP_GROUP");
-    if (flags & 0x00000008) strcat(buffer, ", STYP_PAD");
-    if (flags & 0x00000010) strcat(buffer, ", STYP_COPY");
-    if (flags & 0x00000020) strcat(buffer, ", code");
-    if (flags & 0x00000040) strcat(buffer, ", data");
-    if (flags & 0x00000080) strcat(buffer, ", bss");
-    if (flags & 0x00000100) strcat(buffer, ", S_NEWCFN");
-    if (flags & 0x00000200) strcat(buffer, ", STYP_INFO");
-    if (flags & 0x00000400) strcat(buffer, ", STYP_OVER");
-    if (flags & 0x00000800) strcat(buffer, ", STYP_LIB");
-    if (flags & 0x00001000) strcat(buffer, ", COMDAT");
-    if (flags & 0x00002000) strcat(buffer, ", STYP_MERGE");
-    if (flags & 0x00004000) strcat(buffer, ", STYP_REVERSE_PAD");
-    if (flags & 0x00008000) strcat(buffer, ", FARDATA");
-    if (flags & 0x00010000) strcat(buffer, ", (unknown flags 0x10000)");
-    if (flags & 0x00020000) strcat(buffer, ", purgeable");  /* or 16BIT */
-    if (flags & 0x00040000) strcat(buffer, ", locked");
-    if (flags & 0x00080000) strcat(buffer, ", preload");
-    if (flags & 0x01000000) strcat(buffer, ", extended relocations");
-    if (flags & 0x02000000) strcat(buffer, ", discardable");
-    if (flags & 0x04000000) strcat(buffer, ", not cached");
-    if (flags & 0x08000000) strcat(buffer, ", not paged");
-    if (flags & 0x10000000) strcat(buffer, ", shared");
-    if (flags & 0x20000000) strcat(buffer, ", executable");
-    if (flags & 0x40000000) strcat(buffer, ", readable");
-    if (flags & 0x80000000) strcat(buffer, ", writable");
+    if (flags & 0x00000001) buffer += ", STYP_DSECT";
+    if (flags & 0x00000002) buffer += ", STYP_NOLOAD";
+    if (flags & 0x00000004) buffer += ", STYP_GROUP";
+    if (flags & 0x00000008) buffer += ", STYP_PAD";
+    if (flags & 0x00000010) buffer += ", STYP_COPY";
+    if (flags & 0x00000020) buffer += ", code";
+    if (flags & 0x00000040) buffer += ", data";
+    if (flags & 0x00000080) buffer += ", bss";
+    if (flags & 0x00000100) buffer += ", S_NEWCFN";
+    if (flags & 0x00000200) buffer += ", STYP_INFO";
+    if (flags & 0x00000400) buffer += ", STYP_OVER";
+    if (flags & 0x00000800) buffer += ", STYP_LIB";
+    if (flags & 0x00001000) buffer += ", COMDAT";
+    if (flags & 0x00002000) buffer += ", STYP_MERGE";
+    if (flags & 0x00004000) buffer += ", STYP_REVERSE_PAD";
+    if (flags & 0x00008000) buffer += ", FARDATA";
+    if (flags & 0x00010000) buffer += ", (unknown flags 0x10000)";
+    if (flags & 0x00020000) buffer += ", purgeable";  /* or 16BIT */
+    if (flags & 0x00040000) buffer += ", locked";
+    if (flags & 0x00080000) buffer += ", preload";
+    if (flags & 0x01000000) buffer += ", extended relocations";
+    if (flags & 0x02000000) buffer += ", discardable";
+    if (flags & 0x04000000) buffer += ", not cached";
+    if (flags & 0x08000000) buffer += ", not paged";
+    if (flags & 0x10000000) buffer += ", shared";
+    if (flags & 0x20000000) buffer += ", executable";
+    if (flags & 0x40000000) buffer += ", readable";
+    if (flags & 0x80000000) buffer += ", writable";
 
-    printf("    Flags: 0x%08x (%s)\n", flags, buffer+2);
-    printf("    Alignment: %d (2**%d)\n", 1 << alignment, alignment);
+    print!("    Flags: 0x%08x (%s)\n", flags, buffer+2);
+    print!("    Alignment: %d (2**%d)\n", 1 << alignment, alignment);
 }
 
 /* We don't actually know what sections contain code. In theory it could be any
@@ -527,10 +527,10 @@ void print_sections(struct pe *pe) {
     for (i = 0; i < pe->header->NumberOfSections; i++) {
         sec = &pe->sections[i];
 
-        putchar('\n');
-        printf("Section %s (start = 0x%x, length = 0x%x, minimum allocation = 0x%x):\n",
+        print!('\n');
+        print!("Section %s (start = 0x%x, length = 0x%x, minimum allocation = 0x%x):\n",
             sec->name, sec->offset, sec->length, sec->min_alloc);
-        printf("    Address: %x\n", sec->address);
+        print!("    Address: %x\n", sec->address);
         print_section_flags(sec->flags);
 
         /* These fields should only be populated for object files (I think). */

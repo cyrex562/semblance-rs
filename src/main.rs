@@ -3,8 +3,27 @@ mod semblance;
 mod pe_h;
 mod pe_header;
 mod pe_section;
-mod x86_instr_h;
-mod x86_instr;
+mod x86_instr_def;
+mod x86_instr_ops;
+mod x86_32_instr;
+mod x86_64_instr;
+mod x86_instr_grp;
+mod x86_0f_instr;
+mod x86_fpu_m_instr;
+mod x86_fpu_r_instr;
+mod x86_fpu_single_instr;
+mod x86_instr_operand;
+mod x86_sse_instr;
+mod x86_sse_op32_instr;
+mod x86_sse_repne_instr;
+mod x86_sse_repe_instr;
+mod x86_sse_single_instr;
+mod x86_instr_arg_type;
+mod x86_instr_prefix;
+mod x86_mod_rm;
+mod mz;
+mod ne;
+mod ne_resource;
 
 // int main(int argc, char *argv[]){
 //     int opt;
@@ -64,7 +83,7 @@ mod x86_instr;
 //             else if (!strcmp(optarg, "nasm"))
 //                 AsmSyntax = NASM;
 //             else {
-//                 fprintf(stderr, "Unrecognized disassembly option `%s'.\n", optarg);
+//                 eprint!( "Unrecognized disassembly option `{}'.\n", optarg);
 //                 return 1;
 //             }
 //             break;
@@ -86,12 +105,12 @@ mod x86_instr;
 //             else if (optarg[0] == '0' || optarg[0] == 'n' || optarg[0] == 'N')
 //                 pe_rel_addr = 0;
 //             else {
-//                 fprintf(stderr, "Unrecognized --pe-rel-addr option `%s'.\n", optarg);
+//                 eprint!( "Unrecognized --pe-rel-addr option `{}'.\n", optarg);
 //                 return 1;
 //             }
 //             break;
 //         default:
-//             fprintf(stderr, "Usage: dumpne [options] <file>\n");
+//             eprint!( "Usage: dumpne [options] <file>\n");
 //             return 1;
 //         }
 //     }

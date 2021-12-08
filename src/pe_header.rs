@@ -162,7 +162,7 @@ pub fn print_opt32(opt: &OptionalHeader)
         if pe_rel_addr == 0 {
             address += opt.ImageBase;
         }
-        println!("program entry point: {:0x}", address);
+        println!("program Entry point: {:0x}", address);
     }
 
 
@@ -205,7 +205,7 @@ pub fn print_opt64(opt: &OptionalHeaderPep)
         if !pe_rel_addr {
             address += opt.ImageBase;
         }
-        println!("Program entry point: {:x}", address); /* 28 */
+        println!("Program Entry point: {:x}", address); /* 28 */
     }
 
     println!("Base of code section: {:x}", opt.BaseOfCode); /* 2c */
@@ -309,7 +309,7 @@ pub fn get_export_table(pe: &PortableExecutableHeader)
     /* If addr_table_count exceeds export_count, this means that some exports
      * are nameless (and thus exported by ordinal). */
 
-    for (i = 0; i < header.addr_table_count; ++i)
+    for (i = 0; i < header.addr_table_count;  += 1i)
     {
         pe.exports[i].ordinal = i + header.ordinal_base;
         pe.exports[i].address = read_dword(offset + i * 4);
@@ -317,30 +317,30 @@ pub fn get_export_table(pe: &PortableExecutableHeader)
     }
 
     /* Why? WHY? */
-    for (i = 0; i < header.export_count; ++i)
+    for (i = 0; i < header.export_count;  += 1i)
     {
-        word index = read_word(addr2offset(header.ord_table_addr, pe) + (i * sizeof(word)));
-        dword name_addr = read_dword(addr2offset(header.name_table_addr, pe) + (i * sizeof(dword)));
+        u16 index = read_word(addr2offset(header.ord_table_addr, pe) + (i * sizeof(u16)));
+        u32 name_addr = read_dword(addr2offset(header.name_table_addr, pe) + (i * sizeof(u32)));
         pe.exports[index].name = read_data(addr2offset(name_addr, pe));
     }
 
     pe.export_count = header.addr_table_count;
 }
 
-static void get_import_name_table(struct import_module *module, dword nametab_addr, struct pe *pe)
+static void get_import_name_table(struct import_module *module, u32 nametab_addr, struct pe *pe)
 {
-    off_t offset = addr2offset(nametab_addr, pe);
+    offset: usize = addr2offset(nametab_addr, pe);
     unsigned i, count;
 
     count = 0;
     if (pe.magic == 0x10b)
-        while (read_dword(offset + count * 4)) count++;
+        while (read_dword(offset + count * 4)) count += 1;
     else
-        while (read_qword(offset + count * 8)) count++;
+        while (read_qword(offset + count * 8)) count += 1;
 
     module.nametab = malloc(count * sizeof(*module.nametab));
 
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < count; i += 1) {
         qword address;
         if (pe.magic == 0x10b)
         {
@@ -353,7 +353,7 @@ static void get_import_name_table(struct import_module *module, dword nametab_ad
             module.nametab[i].is_ordinal = !!(address & (1ull << 63));
         }
         if (module.nametab[i].is_ordinal)
-            module.nametab[i].ordinal = (word)address;
+            module.nametab[i].ordinal = (u16)address;
         else
             module.nametab[i].name = read_data(addr2offset(address, pe) + 2); /* skip hint */
     }
@@ -361,17 +361,17 @@ static void get_import_name_table(struct import_module *module, dword nametab_ad
 }
 
 static void get_import_module_table(struct pe *pe) {
-    off_t offset = addr2offset(pe.dirs[1].address, pe);
-    static const dword zeroes[5] = {0};
+    offset: usize = addr2offset(pe.dirs[1].address, pe);
+    static const u32 zeroes[5] = {0};
     int i;
 
     pe.import_count = 0;
     while (memcmp(read_data(offset + pe.import_count * 20), zeroes, 20))
-        pe.import_count++;
+        pe.import_count += 1;
 
     pe.imports = malloc(pe.import_count * sizeof(struct import_module));
 
-    for (i = 0; i < pe.import_count; i++)
+    for (i = 0; i < pe.import_count; i += 1)
     {
         pe.imports[i].module = read_data(addr2offset(read_dword(offset + i * 20 + 12), pe));
         pe.imports[i].iat_addr = read_dword(offset + i * 20 + 16);
@@ -380,7 +380,7 @@ static void get_import_module_table(struct pe *pe) {
 }
 
 static void get_reloc_table(struct pe *pe) {
-    off_t offset = addr2offset(pe.dirs[5].address, pe), cursor = offset;
+    offset: usize = addr2offset(pe.dirs[5].address, pe), cursor = offset;
     unsigned i, reloc_idx = 0;
 
     pe.reloc_count = 0;
@@ -394,23 +394,23 @@ static void get_reloc_table(struct pe *pe) {
     cursor = offset;
     while (cursor < offset + pe.dirs[5].size)
     {
-        dword block_base = read_dword(cursor);
-        dword block_size = read_dword(cursor + 4);
+        u32 block_base = read_dword(cursor);
+        u32 block_size = read_dword(cursor + 4);
 
-        for (i = 0; i < (block_size - 8) / 2; ++i)
+        for (i = 0; i < (block_size - 8) / 2;  += 1i)
         {
-            word r = read_word(cursor + 8 + i * 2);
+            u16 r = read_word(cursor + 8 + i * 2);
             pe.relocs[reloc_idx].offset = block_base + (r & 0xfff);
             pe.relocs[reloc_idx].type = r >> 12;
-            reloc_idx++;
+            reloc_idx += 1;
         }
         cursor += block_size;
     }
 }
 
-static void readpe(off_t offset_pe, struct pe *pe)
+static void readpe(offset_pe: usize, struct pe *pe)
 {
-    off_t offset;
+    offset: usize;
     int i, cdirs;
 
     pe.header = read_data(offset_pe + 4);
@@ -427,7 +427,7 @@ static void readpe(off_t offset_pe, struct pe *pe)
         cdirs = pe.opt64.NumberOfRvaAndSizes;
         offset = offset_pe + 4 + sizeof(struct file_header) + sizeof(struct optional_header_pep);
     } else {
-        warn("Don't know how to read image type %#x\n", pe.magic);
+        eprint!("Don't know how to read image type %#x\n", pe.magic);
         exit(1);
     }
 
@@ -436,7 +436,7 @@ static void readpe(off_t offset_pe, struct pe *pe)
 
     /* read the section table */
     pe.sections = malloc(pe.header.NumberOfSections * sizeof(struct section));
-    for (i = 0; i < pe.header.NumberOfSections; i++)
+    for (i = 0; i < pe.header.NumberOfSections; i += 1)
     {
         memcpy(&pe.sections[i], read_data(offset + i*0x28), 0x28);
 
@@ -444,7 +444,7 @@ static void readpe(off_t offset_pe, struct pe *pe)
         /* in theory nobody will ever try to jump into a data section.
          * VirtualProtect() be damned */
         if (pe.sections[i].flags & 0x20)
-            pe.sections[i].instr_flags = calloc(pe.sections[i].min_alloc, sizeof(byte));
+            pe.sections[i].instr_flags = calloc(pe.sections[i].min_alloc, sizeof(u8));
         else
             pe.sections[i].instr_flags = NULL;
     }
@@ -469,17 +469,17 @@ static void readpe(off_t offset_pe, struct pe *pe)
 static void freepe(struct pe *pe) {
     int i;
 
-    for (i = 0; i < pe.header.NumberOfSections; i++)
+    for (i = 0; i < pe.header.NumberOfSections; i += 1)
         free(pe.sections[i].instr_flags);
     free(pe.sections);
     free(pe.exports);
-    for (i = 0; i < pe.import_count; i++)
+    for (i = 0; i < pe.import_count; i += 1)
         free(pe.imports[i].nametab);
     free(pe.relocs);
     free(pe.imports);
 }
 
-void dumppe(off_t offset_pe) {
+void dumppe(offset_pe: usize) {
     struct pe pe = {0};
     int i, j;
 
@@ -509,54 +509,54 @@ void dumppe(off_t offset_pe) {
     if (pe_rel_addr == -1)
         pe_rel_addr = pe.header.Characteristics & 0x2000;
 
-    printf("Module type: PE (Portable Executable)\n");
-    if (pe.name) printf("Module name: %s\n", pe.name);
+    print!("Module type: PE (Portable Executable)\n");
+    if (pe.name) print!("Module name: {}\n", pe.name);
 
     if (mode & DUMPHEADER)
         print_header(&pe);
 
     if (mode & DUMPEXPORT) {
-        putchar('\n');
+        print!('\n');
         if (pe.exports) {
-            printf("Exports:\n");
+            print!("Exports:\n");
 
-            for (i = 0; i < pe.export_count; i++) {
-                dword address = pe.exports[i].address;
+            for (i = 0; i < pe.export_count; i += 1) {
+                u32 address = pe.exports[i].address;
                 if (!address)
                     continue;
                 if (!pe_rel_addr)
                     address += pe.imagebase;
-                printf("\t%5d\t%#8x\t%s", pe.exports[i].ordinal, address,
+                print!("\t%5d\t%#8x\t{}", pe.exports[i].ordinal, address,
                     pe.exports[i].name ? pe.exports[i].name : "<no name>");
                 if (pe.exports[i].address >= pe.dirs[0].address
                         && pe.exports[i].address < (pe.dirs[0].address + pe.dirs[0].size))
-                    printf(" . %s", (const char *)read_data(addr2offset(pe.exports[i].address, &pe)));
-                putchar('\n');
+                    print!(" . {}", (const char *)read_data(addr2offset(pe.exports[i].address, &pe)));
+                print!('\n');
             }
         } else
-            printf("No export table\n");
+            print!("No Export table\n");
     }
 
     if (mode & DUMPIMPORT) {
-        putchar('\n');
+        print!('\n');
         if (pe.imports) {
-            printf("Imported modules:\n");
-            for (i = 0; i < pe.import_count; i++)
-                printf("\t%s\n", pe.imports[i].module);
+            print!("Imported modules:\n");
+            for (i = 0; i < pe.import_count; i += 1)
+                print!("\t{}\n", pe.imports[i].module);
 
-            printf("\nImported functions:\n");
-            for (i = 0; i < pe.import_count; i++) {
-                printf("\t%s:\n", pe.imports[i].module);
-                for (j = 0; j < pe.imports[i].count; j++)
+            print!("\nImported functions:\n");
+            for (i = 0; i < pe.import_count; i += 1) {
+                print!("\t{}:\n", pe.imports[i].module);
+                for (j = 0; j < pe.imports[i].count; j += 1)
                 {
                     if (pe.imports[i].nametab[j].is_ordinal)
-                        printf("\t\t<ordinal %u>\n", pe.imports[i].nametab[j].ordinal);
+                        print!("\t\t<ordinal %u>\n", pe.imports[i].nametab[j].ordinal);
                     else
-                        printf("\t\t%s\n", pe.imports[i].nametab[j].name);
+                        print!("\t\t{}\n", pe.imports[i].nametab[j].name);
                 }
             }
         } else
-            printf("No imported module table\n");
+            print!("No imported module table\n");
     }
 
     if (mode & DISASSEMBLE)

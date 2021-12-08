@@ -53,19 +53,19 @@ pub fn dump_file(file_name_path: &str) . Result<(), Box<dyn Error>> {
     let map = unsafe { MmapOptions::new().map(&fd)? };
 
     // if ((fd = open(file, O_RDONLY)) < 0) {
-    //     perror("Cannot open %s");
+    //     perror("Cannot open {}");
     //     return;
     // }
 
     // if (fstat(fd, &st) < 0)
     // {
-    //     perror("Cannot stat %s");
+    //     perror("Cannot stat {}");
     //     return;
     // }
 
     // if ((map = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
     // {
-    //     perror("Cannot map %s");
+    //     perror("Cannot map {}");
     //     return;
     // }
     let mut magic = read_word(&map.to_vec(), 0);
@@ -85,7 +85,7 @@ pub fn dump_file(file_name_path: &str) . Result<(), Box<dyn Error>> {
         }
     } else {
         eprintln!("file format not recognized");
-        // fprintf(stderr, "File format not recognized\n");
+        // eprint!( "File format not recognized\n");
     }
     Ok(())
 }
