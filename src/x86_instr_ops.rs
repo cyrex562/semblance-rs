@@ -1381,7 +1381,7 @@ pub fn print_instr(ip: &String, p: &Vec<u8>, len: i32, flags: u8, instr: &Instru
         if (instr.args[1].string[0])
             print!("{},", instr.args[1].string);
         if (instr.vex_reg)
-            print!("%%ymm%d, ", instr.vex_reg);
+            print!("%%ymm{}, ", instr.vex_reg);
         if (instr.args[0].string[0])
             print!("{}", instr.args[0].string);
         if (instr.args[2].string[0])
@@ -1392,7 +1392,7 @@ pub fn print_instr(ip: &String, p: &Vec<u8>, len: i32, flags: u8, instr: &Instru
         if (instr.args[1].string[0])
             print!(", ");
         if (instr.vex_reg)
-            print!("ymm%d, ", instr.vex_reg);
+            print!("ymm{}, ", instr.vex_reg);
         if (instr.args[1].string[0])
             print!("{}", instr.args[1].string);
         if (instr.args[2].string[0])

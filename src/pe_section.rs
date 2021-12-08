@@ -405,7 +405,7 @@ static void scan_segment(u32 ip, struct pe *pe) {
                     }
                     break;
                 default:
-                    warn_at("Don't know how to handle relocation type %d\n", r.type);
+                    warn_at("Don't know how to handle relocation type {}\n", r.type);
                     break;
                 }
                 break;
@@ -459,7 +459,7 @@ static void print_section_flags(u32 flags) {
     if (flags & 0x80000000) buffer += ", writable";
 
     print!("    Flags: 0x%08x ({})\n", flags, buffer+2);
-    print!("    Alignment: %d (2**%d)\n", 1 << alignment, alignment);
+    print!("    Alignment: {} (2**{})\n", 1 << alignment, alignment);
 }
 
 /* We don't actually know what sections contain code. In theory it could be any
@@ -490,7 +490,7 @@ void read_sections(struct pe *pe) {
                 sec.instr_flags[address - sec.address] |= INSTR_RELOC;
                 break;
             default:
-                eprint!("%#x: Don't know how to handle relocation type %d\n",
+                eprint!("%#x: Don't know how to handle relocation type {}\n",
                     pe.relocs[i].offset, pe.relocs[i].type);
                 break;
             }
@@ -541,7 +541,7 @@ void print_sections(struct pe *pe) {
 
         /* These fields should only be populated for object files (I think). */
         if (sec.reloc_offset || sec.reloc_count)
-            eprint!("Section {} has relocation data: offset = %x, count = %d\n",
+            eprint!("Section {} has relocation data: offset = %x, count = {}\n",
                 sec.name, sec.reloc_offset, sec.reloc_count);
 
         /* Sometimes the .text section is marked as both code and data. I've
