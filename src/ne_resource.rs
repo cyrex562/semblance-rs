@@ -574,97 +574,126 @@ pub const rsrc_version_type: [String;9] = [
     "".to_string()
 ];
 
-pub const rsrc_version_subtype_drv: [String;10] = [
-    "unknown",              /* 0 VFT2_UNKNOWN */
-    "printer",              /* 1 VFT2_DRV_PRINTER etc. */
-    "keyboard",             /* 2 */
-    "language",             /* 3 */
-    "display",              /* 4 */
-    "mouse",                /* 5 */
-    "network",              /* 6 */
-    "system",               /* 7 */
-    "installable",          /* 8 */
-    "sound",                /* 9 */
-    "communications",       /* 10 */
-    "input method",         /* 11, found in WINE */
-    "versioned printer",    /* 12 */
-    0
+pub const rsrc_version_subtype_drv: [String;14] = [
+    "unknown".to_string(),              /* 0 VFT2_UNKNOWN */
+    "printer".to_string(),              /* 1 VFT2_DRV_PRINTER etc. */
+    "keyboard".to_string(),             /* 2 */
+    "language".to_string(),             /* 3 */
+    "display".to_string(),              /* 4 */
+    "mouse".to_string(),                /* 5 */
+    "network".to_string(),              /* 6 */
+    "system".to_string(),               /* 7 */
+    "installable".to_string(),          /* 8 */
+    "sound".to_string(),                /* 9 */
+    "communications".to_string(),       /* 10 */
+    "input method".to_string(),         /* 11, found in WINE */
+    "versioned printer".to_string(),    /* 12 */
+    "".to_string()
 ];
 
-static void print_rsrc_version_flags(struct version_header header){
-    char buffer[1024];
-    int i;
+pub fn print_rsrc_version_flags(header: &version_header){
+    let mut buffer = String::new();
+    let mut i = 0i32;
     
     buffer[0] = '\0';
-    for (i=0;i<6;i += 1){
-        if (header.flags_file & (1<<i)){
+    for i in 0 .. 6 {
+        if header.flags_file & (1<<i) {
             buffer += ", ";
-            strcat(buffer, rsrc_version_file[i]);
+            buffer += &*rsrc_version_file[i];
         }
     }
-    if (header.flags_file & 0xffc0)
-        sprintf(buffer+strlen(buffer), ", (unknown flags 0x{:04x})", header.flags_file & 0xffc0);
+    if header.flags_file & 0xffc0 {
+        buffer += fmt!(", (unknown flags 0x{:04x})", header.flags_file & 0xffc0);
+    }
     print!("    File flags: ");
-    if (header.flags_file)
-        print!("{}", buffer+2);
+    if (header.flags_file) {
+        print!("{}", buffer[2..]);
+    }
 
     buffer[0] = '\0';
-    if (header.flags_os == 0)
+    if (header.flags_os == 0) {
         buffer += ", VOS_UNKNOWN";
+    }
     else {
-        switch (header.flags_os & 0xffff){
-        case 1: buffer += ", VOS__WINDOWS16"; break;
-        case 2: buffer += ", VOS__PM16"; break;
-        case 3: buffer += ", VOS__PM32"; break;
-        case 4: buffer += ", VOS__WINDOWS32"; break;
-        default: sprintf(buffer, ", (unknown OS 0x{:04x})", header.flags_os & 0xffff);
+        match (header.flags_os & 0xffff){
+        1 => {
+                buffer += ", VOS__WINDOWS16";
+            }
+        2 => {
+                buffer += ", VOS__PM16";
+            }
+        3 => {
+                buffer += ", VOS__PM32";
+            }
+        4 => {
+                buffer += ", VOS__WINDOWS32";
+            }
+        _ => {
+            buffer += fmt!(", (unknown OS 0x{:04x})", header.flags_os & 0xffff);
         }
-        switch (header.flags_os >> 16){
-        case 1: buffer += ", VOS_DOS"; break;
-        case 2: buffer += ", VOS_OS216"; break;
-        case 3: buffer += ", VOS_OS232"; break;
-        case 4: buffer += ", VOS_NT"; break;
-        case 5: buffer += ", VOS_WINCE"; break; /* found in WINE */
-        default: sprintf(buffer+strlen(buffer), ", (unknown OS 0x{:04x})", header.flags_os >> 16);
+        }
+        match header.flags_os >> 16 {
+        1 => {
+                buffer += ", VOS_DOS";
+            }
+        2 => {
+                buffer += ", VOS_OS216";
+            }
+        3 => {
+                buffer += ", VOS_OS232";
+            }
+        4 => {
+                buffer += ", VOS_NT";
+            }
+        5 => {
+                buffer += ", VOS_WINCE";
+            } /* found in WINE */
+        _ => {
+            buffer += fmt!(", (unknown OS 0x{:04x})", header.flags_os >> 16);
+        }
         }
     }
-    print!("\n    OS flags: {}\n", buffer+2);
+    print!("\n    OS flags: {}\n", buffer[2..]);
 
-    if (header.flags_type <= 7)
+    if header.flags_type <= 7 {
         print!("    Type: {}\n", rsrc_version_type[header.flags_type]);
-    else
+    }
+    else {
         print!("    Type: (unknown type {})\n", header.flags_type);
+    }
 
-    if (header.flags_type == 3){ /* driver */
-        if (header.flags_subtype <= 12)
+    if header.flags_type == 3 { /* driver */
+        if header.flags_subtype <= 12 {
             print!("    Subtype: {} driver\n", rsrc_version_subtype_drv[header.flags_subtype]);
-        else
+        }
+        else {
             print!("    Subtype: (unknown subtype {})\n", header.flags_subtype);
+        }
     } else if (header.flags_type == 4){ /* font */
-        if (header.flags_subtype == 0)      print!("    Subtype: unknown font\n");
-        else if (header.flags_subtype == 1) print!("    Subtype: raster font\n");
-        else if (header.flags_subtype == 2) print!("    Subtype: vector font\n");
-        else if (header.flags_subtype == 3) print!("    Subtype: TrueType font\n");
-        else print!("    Subtype: (unknown subtype {})\n", header.flags_subtype);
+        if (header.flags_subtype == 0) { print!("    Subtype: unknown font\n"); }
+        else if (header.flags_subtype == 1) { print!("    Subtype: raster font\n"); }
+        else if (header.flags_subtype == 2) { print!("    Subtype: vector font\n"); }
+        else if (header.flags_subtype == 3) { print!("    Subtype: TrueType font\n"); }
+        else { print!("    Subtype: (unknown subtype {})\n", header.flags_subtype); }
     } else if (header.flags_type == 5){ /* VXD */
         print!("    Virtual device ID: {}\n", header.flags_subtype);
     } else if (header.flags_subtype){
         /* according to MSDN nothing else is valid */
         print!("    Subtype: (unknown subtype {})\n", header.flags_subtype);
     }
-};
+}
 
-static void print_rsrc_strings(offset: usize, end: usize)
+pub fn print_rsrc_strings(map: &Vec<u8>, mut offset: usize, end: usize)
 {
-    u16 length;
+    let mut length = 0u16;
 
-    while (offset < end)
+    while offset < end
     {
         /* first length is redundant */
-        length = read_word(offset + 2);
+        length = read_word(map, offset + 2);
         print!("        ");
-        offset = print_escaped_string0(offset + 4);
-        offset = (offset + 3) & ~3;
+        offset = print_escaped_string0(map, offset + 4);
+        offset = (offset + 3) & !3;
         print!(": ");
         /* According to MSDN this is zero-terminated, and in most cases it is.
          * However, at least one application (msbsolar) has NEs with what
@@ -674,16 +703,16 @@ static void print_rsrc_strings(offset: usize, end: usize)
          *
          * And another file has a zero length here. How do compilers screw this
          * up so badly? */
-        print_escaped_string(offset, length ? length - 1 : 0);
+        print_escaped_string(map, offset, (if length > 0 { length - 1 } else { 0 }) as i32);
         offset += length;
-        offset = (offset + 3) & ~3;
+        offset = (offset + 3) & !3;
         print!('\n');
     }
-};
+}
 
-static void print_rsrc_stringfileinfo(offset: usize, end: usize)
+pub fn print_rsrc_stringfileinfo(map: &Vec<u8>, offset: usize, end: usize)
 {
-    u16 length;
+    let mut length = 0u16;
     unsigned int lang = 0;
     unsigned int codepage = 0;
 
@@ -1036,7 +1065,7 @@ static int filter_resource(const char *type, const char *id){
 
 struct resource {
     u16 offset;
-    u16 length;
+    let mut length = 0u16;
     u16 flags;
     u16 id;
     u16 handle; /* fixme: what is this? */
