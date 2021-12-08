@@ -1,4 +1,6 @@
 use crate::semblance::{read_byte, read_data, read_word};
+// use text_io::scan;
+use scan_fmt::scan_fmt;
 
 pub fn dup_string_resource(map: &Vec<u8>, offset: usize) -> String
 {
@@ -710,43 +712,44 @@ pub fn print_rsrc_strings(map: &Vec<u8>, mut offset: usize, end: usize)
     }
 }
 
-pub fn print_rsrc_stringfileinfo(map: &Vec<u8>, offset: usize, end: usize)
+pub fn print_rsrc_stringfileinfo(map: &Vec<u8>, mut offset: usize, end: usize)
 {
     let mut length = 0u16;
-    unsigned int lang = 0;
-    unsigned int codepage = 0;
+    let lang = 0u32;
+    let codepage = 0u32;
 
     /* we already processed the StringFileInfo header */
-    while (offset < end)
+    while offset < end
     {
         /* StringTable header */
-        length = read_word(offset);
-
+        length = read_word(map, offset);
         /* codepage and language code */
-        sscanf(read_data(offset + 4), "%4x%4x", &lang, &codepage);
+        let data = read_data(map, offset + 4);
+        scan_fmt!(data, "{4x}{4x}", lang, codepage);
+        // sscanf(read_data(map, offset + 4), "%4x%4x", &lang, &codepage);
         print!("    String table (lang={:04x}, codepage={:04x}):\n", lang, codepage);
-
-        print_rsrc_strings(offset + 16, offset + length);
+        print_rsrc_strings(map, offset + 16, offset + length);
         offset += length;
     }
-};
+}
 
-static void print_rsrc_varfileinfo(offset: usize, end: usize)
+pub fn print_rsrc_varfileinfo(mut offset: usize, end: usize)
 {
-    while (offset < end)
+    while offset < end
     {
         /* first length is redundant */
-        u16 length = read_word(offset + 2), i;
+        let length = read_word(map, offset + 2);
         offset += 16;
-        for (i = 0; i < length; i += 4)
-            print!("    Var (lang={:04x}, codepage={:04x})\n", read_word(offset + i), read_word(offset + i + 2));
+        for i in (0 .. length).step_by(4) {
+            print!("    Var (lang={:04x}, codepage={:04x})\n", read_word(map, offset + i), read_word(map, offset + i + 2));
+        }
         offset += length;
     }
-};
+}
 
-static void print_rsrc_resource(u16 type, offset: usize, size_t length, u16 rn_id)
+pub fn print_rsrc_resource(rsrc_type: u16, offset: usize, length: usize, rn_id: u16)
 {
-    switch (type)
+    match rsrc_type
     {
     case 0x8001: /* Cursor */
         print!("    Hotspot: ({}, {})\n", read_word(offset), read_word(offset + 2));
