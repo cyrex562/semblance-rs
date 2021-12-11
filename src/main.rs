@@ -5,6 +5,7 @@ mod dump;
 mod mz;
 mod ne;
 mod ne_resource;
+mod ne_segment;
 mod pe_h;
 mod pe_header;
 mod pe_section;
@@ -102,7 +103,7 @@ mod x86_sse_single_instr;
 //         case 'x': /* all headers */
 //             mode |= DUMPHEADER | DUMPEXPORT | DUMPIMPORT;
 //             break;
-//         case 0x80:
+//         0x80 =>
 //             if (optarg[0] == '1' || optarg[0] == 'y' || optarg[0] == 'Y')
 //                 pe_rel_addr = 1;
 //             else if (optarg[0] == '0' || optarg[0] == 'n' || optarg[0] == 'N')

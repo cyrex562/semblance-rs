@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
 
-use std::{fs::File, error::Error};
 use std::path::Path;
+use std::{error::Error, fs::File};
 
 use memmap::MmapOptions;
 
@@ -37,7 +37,7 @@ use crate::semblance::{read_dword, read_word};
 // unsigned resource_filters_count;
 // enum AsmSyntax AsmSyntax;
 
-pub fn dump_file(file_name_path: &str) . Result<(), Box<dyn Error>> {
+pub fn dump_file(file_name_path: &str) -> Result<(), Box<dyn Error>> {
     // struct stat st;
 
     // word magic;

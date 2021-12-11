@@ -40,7 +40,7 @@ pub const INSTRUCTION_PREFIXES: [InstrPrefix;14] = [
    InstrPrefix::new(InstrPrefixGrp::Group2, 0x65, "GS Segment override"),
     // branching hints
     // used only with JCC instr
-    InstrPrefix::new(InstrPrefixGrp::Group2, 0x2e "branch not taken"),
+    InstrPrefix::new(InstrPrefixGrp::Group2, 0x2e, "branch not taken"),
     // used only with JCC instr
     InstrPrefix::new(InstrPrefixGrp::Group2, 0x3d, "branch taken"),
     // also used for some instructions such as SSE three-byte opcode
