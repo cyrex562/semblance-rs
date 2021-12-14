@@ -14,28 +14,28 @@ pub fn MEMOF(x: u8) -> u8 {
 
 use std::mem;
 use libc::printf;
-use crate::semblance::AsmSyntax::{GAS, MASM, NASM};
-use crate::semblance::{COMPILABLE, NO_SHOW_ADDRESSES, NO_SHOW_RAW_INSN};
-use crate::x86_0f_instr::INSTRUCTIONS_0F;
-use crate::x86_fpu_m_instr::INSTRUCTIONS_FPU_M;
-use crate::x86_fpu_r_instr::instructions_fpu_r;
-use crate::x86_fpu_single_instr::instructions_fpu_single;
-use crate::x86_instr_grp::INSTRUCTIONS_GROUP;
-use crate::x86_instr_def::{Argument, INSTR_FAR, INSTR_JUMP, Instruction, OP_64, OP_ARG2_CL, OP_ARG2_IMM, OP_ARG2_IMM8, OP_BRANCH, OP_FAR, OP_IMM64, OP_L, OP_LL, OP_LOCK, OP_OP32_REGONLY, OP_REP, OP_REPE, OP_REPNE, OP_S, OP_STACK, OP_STOP, OP_STRING, PREFIX_ADDR32, PREFIX_CS, PREFIX_DS, PREFIX_ES, PREFIX_FS, PREFIX_GS, PREFIX_LOCK, PREFIX_OP32, PREFIX_REPE, PREFIX_REPNE, PREFIX_REX, PREFIX_REXB, PREFIX_REXR, PREFIX_REXX, PREFIX_SEG_MASK, PREFIX_SS, PREFIX_WAIT};
-use crate::x86_instr_arg_type::X86ArgType;
-use crate::x86_instr_operand::Operand;
-use crate::x86_sse_instr::INSTRUCTIONS_SSE;
-use crate::x86_sse_op32_instr::INSTRUCTIONS_SSE_OP32;
-use crate::x86_sse_repe_instr::INSTRUCTIONS_SSE_REPE;
-use crate::x86_sse_repne_instr::INSTRUCTIONS_SSE_REPNE;
-use crate::x86_sse_single_instr::INSTRUCTIONS_SSE_SINGLE;
+use crate::{COMPILABLE, NO_SHOW_ADDRESSES, NO_SHOW_RAW_INSN};
+use crate::defs::AsmSyntax::{GAS, MASM, NASM};
+use crate::x86::instructions::INSTRUCTIONS_0F;
+use crate::x86::instructions::INSTRUCTIONS_FPU_M;
+use crate::x86::instructions::instructions_fpu_r;
+use crate::x86::instructions::instructions_fpu_single;
+use crate::x86::instructions::INSTRUCTIONS_GROUP;
+use crate::x86::defines::Instruction;
+use crate::x86::defines::{Argument, INSTR_FAR, INSTR_JUMP, OP_64, OP_ARG2_CL, OP_ARG2_IMM, OP_ARG2_IMM8, OP_BRANCH, OP_FAR, OP_IMM64, OP_L, OP_LL, OP_LOCK, OP_OP32_REGONLY, OP_REP, OP_REPE, OP_REPNE, OP_S, OP_STACK, OP_STOP, OP_STRING, PREFIX_ADDR32, PREFIX_CS, PREFIX_DS, PREFIX_ES, PREFIX_FS, PREFIX_GS, PREFIX_LOCK, PREFIX_OP32, PREFIX_REPE, PREFIX_REPNE, PREFIX_REX, PREFIX_REXB, PREFIX_REXR, PREFIX_REXX, PREFIX_SEG_MASK, PREFIX_SS, PREFIX_WAIT, X86ArgType};
+use crate::x86::defines::X86Instruction;
+use crate::x86::instructions::INSTRUCTIONS_SSE;
+use crate::x86::instructions::INSTRUCTIONS_SSE_OP32;
+use crate::x86::instructions::INSTRUCTIONS_SSE_REPE;
+use crate::x86::instructions::INSTRUCTIONS_SSE_REPNE;
+use crate::x86::instructions::INSTRUCTIONS_SSE_SINGLE;
 
 /* a subcode value of 8 means all subcodes,
  * or the subcode marks the register if there is one present. */
 
 /* mod < 3 (instructions with memory args) */
 
-pub fn get_fpu_instr(p: &Vec<u8>, op: &mut Operand) -> i32{
+pub fn get_fpu_instr(p: &Vec<u8>, op: &mut Instruction) -> i32{
     let subcode = REGOF(p[1]);
     let index = (p[0] & 7)*8 + subcode;
     if MODOF(p[1]) < 3 {
@@ -49,7 +49,7 @@ pub fn get_fpu_instr(p: &Vec<u8>, op: &mut Operand) -> i32{
             return 0;
         } else {
             /* try the single op list */
-            for i in 0 .. instructions_fpu_single.len()/Operand::sizeof() {
+            for i in 0 .. instructions_fpu_single.len()/ Instruction::sizeof() {
                 if p[0] == instructions_fpu_single[i].opcode &&
                     p[1] == instructions_fpu_single[i].subcode {
                     *op = instructions_fpu_single[i].clone();
@@ -86,14 +86,14 @@ pub fn get_prefix(opcode: u8, bits: i32) -> u16 {
     }
 }
 
-pub fn instr_matches(opcode: u8, subcode: u8, op: &Operand) -> bool {
+pub fn instr_matches(opcode: u8, subcode: u8, op: &Instruction) -> bool {
     ((opcode == op.opcode) && ((op.subcode == 8) || (subcode == op.subcode)))
 }
 
 /* aka 3 byte opcode */
 pub fn get_sse_single(opcode: u8, subcode: u8, instr: &mut Instruction) -> i32 {
     if instr.prefix & PREFIX_OP32 {
-        for i in 0 .. INSTRUCTIONS_SSE_SINGLE.len()/mem::sizeof::<Operand>() {
+        for i in 0 .. INSTRUCTIONS_SSE_SINGLE.len()/mem::sizeof::<Instruction>() {
             if instructions_sse_single_op32[i].opcode == opcode &&
                 instructions_sse_single_op32[i].subcode == subcode {
                 instr.op = instructions_sse_single_op32[i];
@@ -102,7 +102,7 @@ pub fn get_sse_single(opcode: u8, subcode: u8, instr: &mut Instruction) -> i32 {
             }
         }
     } else {
-        for i in 0 .. INSTRUCTIONS_SSE_SINGLE.len()/mem::sizeof::<Operand>() {
+        for i in 0 .. INSTRUCTIONS_SSE_SINGLE.len()/mem::sizeof::<Instruction>() {
             if instructions_sse_single[i].opcode == opcode && instructions_sse_single[i].subcode == subcode {
                 instr.op = instructions_sse_single[i];
                 return 1;
@@ -120,7 +120,7 @@ pub fn get_sse_instr(p: &Vec<u8>, instr: &mut Instruction) -> i32 {
      * solution in that case is probably to modify the size/name instead. */
 
     if instr.prefix & PREFIX_OP32 {
-        for i in 0 < INSTRUCTIONS_SSE_OP32.len()/mem::size_of::<Operand>() {
+        for i in 0 < INSTRUCTIONS_SSE_OP32.len()/mem::size_of::<Instruction>() {
             if instr_matches(p[0], subcode, &instructions_sse_op32[i]) {
                 instr.op = INSTRUCTIONS_SSE_SINGLE[i];
                 instr.prefix &= !PREFIX_OP32;
@@ -128,7 +128,7 @@ pub fn get_sse_instr(p: &Vec<u8>, instr: &mut Instruction) -> i32 {
             }
         }
     } else if instr.prefix & PREFIX_REPNE {
-        for i in 0 .. INSTRUCTIONS_SSE_REPNE / mem::sizeof::<Operand>() {
+        for i in 0 .. INSTRUCTIONS_SSE_REPNE / mem::sizeof::<Instruction>() {
             if instr_matches(p[0], subcode, &instructions_sse_repne[i]) {
                 instr.op = instructions_sse_repne[i];
                 instr.prefix &= !PREFIX_REPNE;
@@ -136,7 +136,7 @@ pub fn get_sse_instr(p: &Vec<u8>, instr: &mut Instruction) -> i32 {
             }
         }
     } else if instr.prefix & PREFIX_REPE {
-        for i in 0 .. INSTRUCTIONS_SSE_REPE.len() / mem::sizeof::<Operand> {
+        for i in 0 .. INSTRUCTIONS_SSE_REPE.len() / mem::sizeof::<Instruction> {
             if instr_matches(p[0], subcode, &instructions_sse_repe[i]) {
                 instr.op = instructions_sse_repe[i];
                 instr.prefix &= !PREFIX_REPE;
@@ -144,7 +144,7 @@ pub fn get_sse_instr(p: &Vec<u8>, instr: &mut Instruction) -> i32 {
             }
         }
     } else {
-        for i in 0 .. INSTRUCTIONS_SSE / mem::sizeo_of::<Operand> {
+        for i in 0 .. INSTRUCTIONS_SSE / mem::sizeo_of::<Instruction> {
             if instr_matches(p[0], subcode, &instructions_sse[i]) {
                 instr.op = instructions_sse[i];
                 return 0;
@@ -184,7 +184,7 @@ pub fn get_0f_instr(p: &mut Vec<u8>, instr: &mut Instruction) -> i32 {
         return 1;
     }
 
-    for i in 0 .. INSTRUCTIONS_0F.len() / mem::size_of::<Operand>() {
+    for i in 0 .. INSTRUCTIONS_0F.len() / mem::size_of::<Instruction>() {
         if instr_matches(p[0], subcode, &instructions_0F[i]) {
             instr.op = instructions_0F[i];
             len = 0;

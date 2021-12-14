@@ -46,24 +46,3 @@ pub fn read_qword(map: &Vec<u8>, offset: usize) -> u64 {
 pub fn read_string(map: &Vec<u8>, offset: usize, length: usize) -> String {
     unimplemented!()
 }
-
-pub const DUMP_HEADER: u8 = 0x01;
-pub const DUMP_RSRC: u8 = 0x02;
-pub const DUMP_EXPORT: u8 = 0x04;
-pub const DUMP_IMPORT: u8 = 0x08;
-pub const DISASSEMBLE: u8 = 0x10;
-pub const SPECFILE: u8 = 0x80;
-// extern word mode; /* what to dump */
-pub const DISASSEMBLE_ALL: u8 = 0x01;
-pub const DEMANGLE: u8 = 0x02;
-pub const NO_SHOW_RAW_INSN: u8 = 0x04;
-pub const NO_SHOW_ADDRESSES: u8 = 0x08;
-pub const COMPILABLE: u8 = 0x10;
-pub const FULL_CONTENTS: u8 = 0x20;
-
-// extern word opts; /* additional options */
-pub enum AsmSyntax {
-    GAS,
-    NASM,
-    MASM,
-}

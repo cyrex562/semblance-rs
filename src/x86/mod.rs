@@ -1,0 +1,16 @@
+mod defines;
+mod instructions;
+mod ops;
+mod x86_0f_instr;
+mod x86_32_instr;
+mod x86_64_instr;
+mod x86_fpu_m_instr;
+mod x86_fpu_r_instr;
+mod x86_fpu_single_instr;
+mod x86_instr_grp;
+mod x86_instr_prefix;
+mod x86_sse_instr;
+mod x86_sse_op32_instr;
+mod x86_sse_repe_instr;
+mod x86_sse_repne_instr;
+mod x86_sse_single_instr;

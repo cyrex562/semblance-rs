@@ -1,33 +1,13 @@
 #[macro_use]
 extern crate scan_fmt;
 
+mod defs;
 mod dump;
 mod mz;
 mod ne;
-mod ne_resource;
-mod ne_segment;
-mod pe_h;
-mod pe_header;
-mod pe_section;
-mod semblance;
-mod x86_0f_instr;
-mod x86_32_instr;
-mod x86_64_instr;
-mod x86_fpu_m_instr;
-mod x86_fpu_r_instr;
-mod x86_fpu_single_instr;
-mod x86_instr_arg_type;
-mod x86_instr_def;
-mod x86_instr_grp;
-mod x86_instr_operand;
-mod x86_instr_ops;
-mod x86_instr_prefix;
-mod x86_mod_rm;
-mod x86_sse_instr;
-mod x86_sse_op32_instr;
-mod x86_sse_repe_instr;
-mod x86_sse_repne_instr;
-mod x86_sse_single_instr;
+mod pe;
+mod util;
+mod x86;
 
 // int main(int argc, char *argv[]){
 //     int opt;
@@ -137,3 +117,18 @@ mod x86_sse_single_instr;
 fn main() {
     println!("Hello, world!");
 }
+
+pub const DISASSEMBLE: u8 = 0x10;
+pub const SPECFILE: u8 = 0x80;
+// extern word mode; /* what to dump */
+pub const DISASSEMBLE_ALL: u8 = 0x01;
+pub const DEMANGLE: u8 = 0x02;
+pub const NO_SHOW_RAW_INSN: u8 = 0x04;
+pub const NO_SHOW_ADDRESSES: u8 = 0x08;
+pub const COMPILABLE: u8 = 0x10;
+pub const FULL_CONTENTS: u8 = 0x20;
+pub const DUMP_HEADER: u8 = 0x01;
+pub const DUMP_RSRC: u8 = 0x02;
+pub const DUMP_EXPORT: u8 = 0x04;
+
+pub const DUMP_IMPORT: u8 = 0x08;

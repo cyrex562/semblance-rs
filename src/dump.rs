@@ -25,7 +25,7 @@ use std::{error::Error, fs::File};
 
 use memmap::MmapOptions;
 
-use crate::semblance::{read_dword, read_word};
+use crate::util::{read_dword, read_word};
 
 // #include "semblance.h"
 
