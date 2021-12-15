@@ -14,6 +14,7 @@ pub const PFX_GRP_2_BR_TAKEN: u8 = 0x3E;
 pub const PFX_GRP_3_OP_SZ_OVRD_PFX: u8 = 0x66;
 pub const PFX_GRP_4_ADDR_SZ_OVRD_PFX: u8 = 0x67;
 
+#[derive(Default, Debug, Clone)]
 pub struct X86InstrSIB {
     /// scale[7:6]
     /// index[5:3] (reg)
@@ -21,6 +22,18 @@ pub struct X86InstrSIB {
     pub scale: u8,
     pub index: u8,
     pub base: u8,
+}
+
+impl X86InstrSIB {
+    pub fn get_eff_addr(&self) -> usize {
+        todo!()
+    }
+}
+
+impl From<u8> for X86InstrSIB {
+    fn from(_: u8) -> Self {
+        todo!()
+    }
 }
 
 pub struct X86InstrModRM {
