@@ -4,15 +4,16 @@ use crate::x86::defines::X86ArgType::{
     REG32, REGONLY, REL, REL8, RM, SEG16, SEGPTR, SI, SP, SS, ST, STX, TR32, XM, XMM, XMMONLY,
 };
 use crate::x86::defines::{
-    X86Instruction, OP_64, OP_ARG2_CL, OP_ARG2_IMM, OP_ARG2_IMM8, OP_BRANCH, OP_FAR, OP_IMM64,
-    OP_L, OP_LL, OP_LOCK, OP_OP32_REGONLY, OP_REP, OP_REPE, OP_REPNE, OP_S, OP_STACK, OP_STOP,
-    OP_STRING,
+    OpEn, REXPrefix, X86Instruction, OP_64, OP_ARG2_CL, OP_ARG2_IMM, OP_ARG2_IMM8, OP_BRANCH,
+    OP_FAR, OP_IMM64, OP_L, OP_LL, OP_LOCK, OP_OP32_REGONLY, OP_REP, OP_REPE, OP_REPNE, OP_S,
+    OP_STACK, OP_STOP, OP_STRING,
 };
 
 pub const INSTRUCTIONS_0F: [X86Instruction; 133] = [
     X86Instruction::new(
+        REXPrefix::REXW,
         [0xF, 0, 0, 0],
-        0,
+        [0, 0, 0],
         0,
         0x00,
         0,
@@ -222,7 +223,19 @@ pub const X86_32_INSTRUCTIONS: [X86Instruction; 256] = [
     X86Instruction::new([0; 4], 0, 0, 0x34, 8, 8, "xor", AL, IMM, 0),
     X86Instruction::new([0; 4], 0, 0, 0x35, 8, -1, "xor", AX, IMM, 0),
     X86Instruction::new([0; 4], 0, 0, 0x36, 8, 0, "ss", NONE, NONE, 0), /* SS prefix */
-    X86Instruction::new([0; 4], 0, 0, 0x37, 8, 0, "aaa", NONE, NONE, 0),
+    X86Instruction::new(
+        [0; 4],
+        [0x37, 0, 0],
+        "AAA",
+        None,
+        None,
+        OpEn::ZO,
+        "invalid",
+        "valid",
+        0,
+        0,
+        "ascii adjust AL after addition",
+    ),
     X86Instruction::new([0; 4], 0, 0, 0x38, 8, 8, "cmp", RM, REG, 0),
     X86Instruction::new([0; 4], 0, 0, 0x39, 8, -1, "cmp", RM, REG, 0),
     X86Instruction::new([0; 4], 0, 0, 0x3A, 8, 8, "cmp", REG, RM, 0),

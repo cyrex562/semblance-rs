@@ -64,30 +64,76 @@ impl Into<u8> for X86InstrModRM {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum REXPrefix {
-    REXW = 0b01001000,
-    REXR = 0b01000100,
-    REXX = 0b01000010,
-    REXB = 0b01000001,
-    REXWR = 0b01001100,
-    REXWX = 0b01001010,
-    REXWB = 0b01001001,
-    REXRX = 0b01000110,
-    REXRB = 0b01000101,
-    REXXB = 0b01000011,
-    REXRXB = 0b01000111,
+    REX,
+    REXW,
+    REXR,
+    REXX,
+    REXB,
+    REXWR,
+    REXWX,
+    REXWB,
+    REXRX,
+    REXRB,
+    REXXB,
+    REXRXB,
+    REXWXB,
+    REXWRB,
+    REXWRX,
+    REXWRXB,
 }
 
+impl REXPrefix {}
+
+impl Into<u8> for REXPrefix {
+    fn into(self) -> u8 {
+        match self {
+            REXPrefix::REX => 0b01000000,
+            REXPrefix::REXW => 0b01001000,
+            REXPrefix::REXR => 0b01000100,
+            REXPrefix::REXX => 0b01000010,
+            REXPrefix::REXB => 0b01000001,
+            REXPrefix::REXWR => 0b01001100,
+            REXPrefix::REXWX => 0b01001010,
+            REXPrefix::REXWB => 0b01001001,
+            REXPrefix::REXRX => 0b01000110,
+            REXPrefix::REXRB => 0b01000101,
+            REXPrefix::REXXB => 0b01000011,
+            REXPrefix::REXRXB => 0b01000111,
+            REXPrefix::REXWXB => 0b01001011,
+            REXPrefix::REXWRB => 0b01001101,
+            REXPrefix::REXWRX => 0b01001110,
+            REXPrefix::REXWRXB => 0b01001111,
+        }
+    }
+}
+
+pub enum OpEn {
+    ZO,
+}
+
+impl OpEn {}
+
+impl Into<[u8; 4]> for OpEn {
+    fn into(self) -> [u8; 4] {
+        match self {
+            OpEn::ZO => [0, 0, 0, 0],
+        }
+    }
+}
 
 pub struct X86Instruction {
-    pub rex_prefix: REXPrefix
     pub prefixes: [u8; 4],
     pub opcode: [u8; 3],
-    pub mod_rm: X86InstrModRM,
-    pub sib: X86InstrSIB,
+    pub name: String,
+    pub mod_rm: Option<X86InstrModRM>,
+    pub sib: Option<X86InstrSIB>,
+    pub op_en: OpEn,
+    pub x64_mode: String,
+    pub compat_leg_mode: String,
     pub displacement: [u8; 4],
     pub immediate: [u8; 4],
-    pub name: String,
     pub description: String,
 }
 
@@ -97,28 +143,34 @@ impl X86Instruction {
         prefixes: [u8; 4],
         // opcode: 1-, 2-, or 3- byte opcode
         opcode: [u8; 3],
+        name: &str,
+        // description,
         // 1 byte if required
-        mod_rm: u8,
+        mod_rm: Option<X86InstrModRM>,
         // 1 byte if required
-        sib: u8,
+        sib: Option<X86InstrSIB>,
+        op_en: OpEn,
+        x64_mode: &str,
+        compat_leg_mode: &str,
         // address displacement of 1, 2, or 4 bytes or none
         displacement: [u8; 4],
         // immediate data of 1, 2, or 4 bytes or none
         immediate: [u8; 4],
         // descriptive name of instruction
-        name: &str,
-        // description,
         description: &str,
     ) -> Self {
         Self {
             prefixes,
             opcode,
-            mod_rm: X86InstrModRM::from(mod_rm),
-            sib: X86InstrSIB::from(sib),
+            mod_rm,
+            sib,
             displacement,
             immediate,
             name: name.into_string(),
             description: description.into_string(),
+            compat_leg_mode: compat_leg_mode.into_string(),
+            x64_mode: x64_mode.into_string(),
+            op_en,
         }
     }
 }
@@ -244,12 +296,6 @@ pub const PFX_REPNE: u16 = 0x0040;
 pub const PFX_REPE: u16 = 0x0080;
 pub const PFX_WAIT: u16 = 0x0100;
 
-pub const PFX_REX: u16 = 0x0800;
-pub const PFX_REXB: u16 = 0x1000;
-pub const PFX_REXX: u16 = 0x2000;
-pub const PFX_REXR: u16 = 0x4000;
-pub const PFX_REXW: u16 = 0x8000;
-
 pub const ESCAPE_OPCODE: u8 = 0x0f;
 pub const MAX_INSTR: usize = 16;
 pub const INSTR_SCANNED: u8 = 0x01;
@@ -258,50 +304,6 @@ pub const INSTR_JUMP: u8 = 0x04;
 pub const INSTR_FUNC: u8 = 0x08;
 pub const INSTR_FAR: u8 = 0x10;
 pub const INSTR_RELOC: u8 = 0x20;
-
-#[derive(Default, Debug, Clone)]
-pub struct Instruction {
-    pub raw: [u8; 15],
-    pub PFXes: [InstrPFX; 4],
-    pub opcode: [u8; 3],
-    pub opcode_field: u8, // really just 3 bits of the ModR/M byte
-    // addressing-form specifier byte
-    // mod field (bits 0-1): combines with r/m to form 32 possible values: eight reigsters and 24 addressing modes
-    // reg/opcode field (bits 2-4): specifies either a register number or three more bits of opcode info
-    // r/m field (bits 5-7): can specify a register as an operand or can be combined with the mod field to encode an addressing mode.
-    pub mod_rm_byte: u8,
-    // addresing byte used with certain encodings of the ModR/M byte, including base-plus-index and scale-plus-index forms of 32-bit addressing.
-    // scale: scale factor
-    // index: register number of the index register
-    // base: register number of the base register
-    pub sib_byte: u8,
-    // displacement can be 1,2, or 4 bytes immediate following the ModR/M or SIB byte
-    // if the instr specifies an immediate operand it always follows any dispalcement bytes. An immediate operand can be 1,2, or 4 bytes
-    pub PFX_raw: [u8; 4],
-    pub opcode_raw: [u8; 3],
-    pub op: Instruction,
-    pub args: [Argument; 3],
-    pub addr_size: u8,
-    pub modrm_disp: DisplacementType,
-    pub modrm_reg: i8,
-    pub sib_scale: u8,
-    pub sib_index: i8,
-    pub usedmem: bool,
-    pub vex: bool,
-    pub vex_reg: u8, // 3 bits
-    pub vex_256: bool,
-}
-
-pub enum ModRmReg {
-    AlAxEaxMm0Xmm0 = 0, // 000
-    ClCxEcxMm1Xmm1 = 1, // 001
-    DlDxEdxMm2Xmm2 = 2, // 010
-    BlBxEbxMm3Xmm3 = 3, // 011
-    AhSpEspMm4Xmm4 = 4, // 100
-    ChBpEbpMm5Xmm5 = 5, // 101
-    DhSiEsiMm6Xmm6 = 6, // 110
-    BhDiEdiMm7Xmm7 = 7, // 111
-}
 
 pub enum ModRmDisp {
     NoDisp = 0,
