@@ -10,7 +10,19 @@ use crate::x86::defines::{
 };
 
 pub const INSTRUCTIONS_0F: [X86Instruction; 133] = [
-    X86Instruction::new([0; 4], 0, 0, 0x00, 0, -1, "sldt", RM, NONE, OP_OP32_REGONLY), /* todo: implement this flag */
+    X86Instruction::new(
+        [0xF, 0, 0, 0],
+        0,
+        0,
+        0x00,
+        0,
+        -1,
+        "sldt",
+        RM,
+        NONE,
+        OP_OP32_REGONLY,
+    ),
+    /* todo: implement this flag */
     X86Instruction::new([0; 4], 0, 0, 0x00, 1, -1, "str", RM, NONE, OP_OP32_REGONLY),
     X86Instruction::new([0; 4], 0, 0, 0x00, 2, 16, "lldt", RM, NONE, 0),
     X86Instruction::new([0; 4], 0, 0, 0x00, 3, 16, "ltr", RM, NONE, 0),

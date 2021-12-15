@@ -36,6 +36,13 @@ impl From<u8> for X86InstrSIB {
     }
 }
 
+impl Into<u8> for X86InstrSIB {
+    fn into(self) -> u8 {
+        todo!()
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct X86InstrModRM {
     /// mod[7:6]:
     /// reg/opcode[5:3]:
@@ -45,15 +52,43 @@ pub struct X86InstrModRM {
     pub rm: u8,
 }
 
-// operand opcode:u16, subcode: u16, size: i8, name: String, arg0: ArgumentType, arg1: ArgumentType, flags: u32
+impl From<u8> for X86InstrModRM {
+    fn from(_: u8) -> Self {
+        todo!()
+    }
+}
+
+impl Into<u8> for X86InstrModRM {
+    fn into(self) -> u8 {
+        todo!()
+    }
+}
+
+pub enum REXPrefix {
+    REXW = 0b01001000,
+    REXR = 0b01000100,
+    REXX = 0b01000010,
+    REXB = 0b01000001,
+    REXWR = 0b01001100,
+    REXWX = 0b01001010,
+    REXWB = 0b01001001,
+    REXRX = 0b01000110,
+    REXRB = 0b01000101,
+    REXXB = 0b01000011,
+    REXRXB = 0b01000111,
+}
+
+
 pub struct X86Instruction {
+    pub rex_prefix: REXPrefix
     pub prefixes: [u8; 4],
     pub opcode: [u8; 3],
-    pub mod_rm: u8,
-    pub sib: u8,
+    pub mod_rm: X86InstrModRM,
+    pub sib: X86InstrSIB,
     pub displacement: [u8; 4],
     pub immediate: [u8; 4],
     pub name: String,
+    pub description: String,
 }
 
 impl X86Instruction {
@@ -72,33 +107,25 @@ impl X86Instruction {
         immediate: [u8; 4],
         // descriptive name of instruction
         name: &str,
+        // description,
+        description: &str,
     ) -> Self {
         Self {
             prefixes,
             opcode,
-            mod_rm,
-            sib,
+            mod_rm: X86InstrModRM::from(mod_rm),
+            sib: X86InstrSIB::from(sib),
             displacement,
             immediate,
             name: name.into_string(),
+            description: description.into_string(),
         }
     }
+}
 
-    pub fn set_sib(&mut self, scale: u8, index: u8, base: u8) {
-        /// scale[7:6]: 2^scale = scale factor
-        /// index[.X, 5:3]: reg containing index
-        /// base[B, 2:0]: reg containing base
-        /// eff_addr = scale * index + base + offset
-        unimplemented!()
-    }
-
-    pub fn get_sib(&self) -> X86InstrSIB {
-        unimplemented!()
-    }
-
-    pub fn get_sib_eff_addr(&self) -> usize {
-        /// eff_addr = scale * index + base + offset
-        unimplemented!()
+impl From<&[u8]> for X86Instruction {
+    fn from(_: &[u8]) -> Self {
+        todo!()
     }
 }
 
