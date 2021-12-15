@@ -1,23 +1,8 @@
 use crate::x86::x86_instr_PFX::InstrPFX;
 
-// operand opcode:u16, subcode: u16, size: i8, name: String, arg0: ArgumentType, arg1: ArgumentType, flags: u32
-pub struct X86Instruction {
-    pub legacy_prefixes: [u8; 4],
-    pub mandatory_prefix: u8,
-    pub rex_prefix: u8,
-    pub opcode: u16,
-    pub subcode: u8,
-    pub size: i8,
-    pub name: String,
-    pub arg0: X86ArgType,
-    pub arg1: X86ArgType,
-    pub flags: u16,
-}
-
 pub const PFX_GRP_1_LOCK_PFX: u8 = 0xF0;
 pub const PFX_GRP_1_REPNE_REPNZ_PFX: u8 = 0xF2;
 pub const PFX_GRP_1_REPE_REPZ_PFX: u8 = 0xF3;
-
 pub const PFX_GRP_2_CS_SEG_OVRD: u8 = 0x2E;
 pub const PFX_GRP_2_SS_SEG_OVRD: u8 = 0x36;
 pub const PFX_GRP_2_DS_SEG_OVRD: u8 = 0x3E;
@@ -26,36 +11,81 @@ pub const PFX_GRP_2_FS_SEG_OVRD: u8 = 0x64;
 pub const PFX_GRP_2_GS_SEG_OVRD: u8 = 0x65;
 pub const PFX_GRP_2_BR_NOT_TAKEN: u8 = 0x2E;
 pub const PFX_GRP_2_BR_TAKEN: u8 = 0x3E;
-
 pub const PFX_GRP_3_OP_SZ_OVRD_PFX: u8 = 0x66;
-
 pub const PFX_GRP_4_ADDR_SZ_OVRD_PFX: u8 = 0x67;
+
+pub struct X86InstrSIB {
+    /// scale[7:6]
+    /// index[5:3] (reg)
+    /// base[2:0] (reg)
+    pub scale: u8,
+    pub index: u8,
+    pub base: u8,
+}
+
+pub struct X86InstrModRM {
+    /// mod[7:6]:
+    /// reg/opcode[5:3]:
+    /// R/M[2:0]:
+    pub mode: u8,
+    pub reg: u8,
+    pub rm: u8,
+}
+
+// operand opcode:u16, subcode: u16, size: i8, name: String, arg0: ArgumentType, arg1: ArgumentType, flags: u32
+pub struct X86Instruction {
+    pub prefixes: [u8; 4],
+    pub opcode: [u8; 3],
+    pub mod_rm: u8,
+    pub sib: u8,
+    pub displacement: [u8; 4],
+    pub immediate: [u8; 4],
+    pub name: String,
+}
 
 impl X86Instruction {
     pub fn new(
-        legacy_prefixes: [u8; 4],
-        mandatory_preifx: u8,
-        rex_prefix: u8,
+        // up to four bytes of instruction prefixes
+        prefixes: [u8; 4],
+        // opcode: 1-, 2-, or 3- byte opcode
         opcode: [u8; 3],
-        subcode: u8,
-        size: i8,
+        // 1 byte if required
+        mod_rm: u8,
+        // 1 byte if required
+        sib: u8,
+        // address displacement of 1, 2, or 4 bytes or none
+        displacement: [u8; 4],
+        // immediate data of 1, 2, or 4 bytes or none
+        immediate: [u8; 4],
+        // descriptive name of instruction
         name: &str,
-        arg0: X86ArgType,
-        arg1: X86ArgType,
-        flags: u16,
     ) -> Self {
         Self {
-            legacy_prefixes,
-            mandatory_prefix,
-            rex_prefix,
+            prefixes,
             opcode,
-            subcode,
-            size,
+            mod_rm,
+            sib,
+            displacement,
+            immediate,
             name: name.into_string(),
-            arg0,
-            arg1,
-            flags,
         }
+    }
+
+    pub fn set_sib(&mut self, scale: u8, index: u8, base: u8) {
+        /// scale[7:6]: 2^scale = scale factor
+        /// index[.X, 5:3]: reg containing index
+        /// base[B, 2:0]: reg containing base
+        /// eff_addr = scale * index + base + offset
+        unimplemented!()
+    }
+
+    pub fn get_sib(&self) -> X86InstrSIB {
+        unimplemented!()
+    }
+
+    pub fn get_sib_eff_addr(&self) -> usize {
+        /// eff_addr = scale * index + base + offset
+        unimplemented!()
     }
 }
 
